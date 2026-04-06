@@ -1,0 +1,125 @@
+{
+  "dogs": {
+    "apollo": {
+      "name": "Apollo",
+      "emoji": "🐾",
+      "personality": "Reactive and fearful. She barks or panics when something frightens her. This is fear — not aggression. She needs extra patience, a slower pace, and a gentler approach.",
+      "notes": "Female. Pit bull × border collie. 5 months old at plan start. Fear stages expected between 6-14 months."
+    },
+    "artemis": {
+      "name": "Artemis",
+      "emoji": "⭐",
+      "personality": "Confident and calmer. Stronger candidate for psychiatric service dog training. Still needs all the same foundation work — she just handles new experiences more easily.",
+      "notes": "Female. Pit bull × border collie. 5 months old at plan start. PSD pathway candidate."
+    }
+  },
+  "phases": [
+    {
+      "phase": 1,
+      "title": "Foundation",
+      "weeks": "1-4",
+      "minimumWeeks": 4,
+      "goal": "Structure, bonding with Diana, and getting separation practice underway.",
+      "skills": {
+        "both": [
+          { "id": "name-game", "name": "Name game", "desc": "Say name → dog looks → yes + treat" },
+          { "id": "crate-practice", "name": "Crate practice", "desc": "Toss treat in, let her walk in and out freely" },
+          { "id": "separation", "name": "Separation time", "desc": "One dog in crate, train the other — building independence" },
+          { "id": "handling", "name": "Handling (paws/ears/mouth)", "desc": "Gently touch → treat. Every day." },
+          { "id": "potty-praise", "name": "Potty praise", "desc": "Big praise every time she goes outside" },
+          { "id": "sit", "name": "Sit", "desc": "Treat at nose → move over head → bottom goes down → yes + treat" },
+          { "id": "leave-it", "name": "Leave it", "desc": "Treat in closed fist → stops trying → treat from other hand" },
+          { "id": "mat-practice", "name": "Mat practice", "desc": "Treat every time she steps on a mat — becomes 'place' later" },
+          { "id": "leash-wearing", "name": "Leash wearing", "desc": "Drag leash indoors supervised to get comfortable" },
+          { "id": "down", "name": "Down", "desc": "From sit, treat from nose to floor between paws" },
+          { "id": "watch-me", "name": "Watch me", "desc": "Hold treat near eyes → looks at your eyes → yes + treat" },
+          { "id": "stay-short", "name": "Stay (short)", "desc": "Sit or down → one step back → return → treat" },
+          { "id": "leash-intro", "name": "Leash walking intro", "desc": "Leash tight → stop. Leash loose → keep walking." },
+          { "id": "door-rule", "name": "Door rule", "desc": "Sit before going through any door. Every door, every time." },
+          { "id": "come", "name": "Come", "desc": "Long leash → name + come → back up fast → treat party" },
+          { "id": "bite-redirect", "name": "Bite redirection", "desc": "Teeth on skin → 'ouch!' → turn away 30 sec" },
+          { "id": "chew-rotation", "name": "Chew rotation", "desc": "Rotate 4-5 safe chews every 2-3 days" },
+          { "id": "solo-adventure", "name": "Solo adventure", "desc": "Each dog on her own outing — car ride, new street, pet store" }
+        ],
+        "apollo": [],
+        "artemis": []
+      },
+      "dailySubset": 8,
+      "dailySubsetNote": "Show a rotating subset of 6-8 skills per day so it doesn't feel overwhelming. Rotate which skills appear."
+    },
+    {
+      "phase": 2,
+      "title": "Real Skills",
+      "weeks": "5-10",
+      "minimumWeeks": 6,
+      "goal": "Build real commands with structure already in place.",
+      "skills": {
+        "both": [
+          { "id": "loose-leash", "name": "Loose leash walking", "desc": "Leash tight → stop and wait. Leash loose → yes + keep going." },
+          { "id": "direction-changes", "name": "Direction changes", "desc": "Say name → turn the other way → treat when she follows" },
+          { "id": "come-distance", "name": "Come from distance", "desc": "Come games from 20+ feet with small distractions" },
+          { "id": "stay-30", "name": "Stay (30 sec)", "desc": "Build to 30 seconds at 6 feet. Change one variable at a time." },
+          { "id": "wait-food", "name": "Wait at food bowl", "desc": "Sit → put bowl down → 'OK' to release" },
+          { "id": "no-jumping", "name": "No jumping", "desc": "Turn back, cross arms, zero reaction. Four paws → spin + treat." },
+          { "id": "place", "name": "Place command", "desc": "Point to mat + 'place.' Build to 2-minute holds." },
+          { "id": "visitor-greeting", "name": "Visitor greeting", "desc": "Brief all guests — no attention until four paws on floor" },
+          { "id": "yer-choice", "name": "It's Yer Choice", "desc": "Treats in open palm → dog waits → gets treat. Impulse control." }
+        ],
+        "apollo": [
+          { "id": "quiet-walks", "name": "Quiet area walks only", "desc": "Keep walks in calm, low-trigger areas" },
+          { "id": "desensitization", "name": "Desensitization work", "desc": "Trigger appears → chicken appears. Trigger gone → treats stop." },
+          { "id": "trigger-log", "name": "Trigger log", "desc": "What trigger, how close, reaction 1-5" }
+        ],
+        "artemis": [
+          { "id": "touch", "name": "Touch (nose to palm)", "desc": "Tap nose to open palm on cue — service dog foundation" },
+          { "id": "calm-exposure", "name": "Calm dog exposure", "desc": "Calm behavior when she notices another dog at a distance" }
+        ]
+      },
+      "dailySubset": 8
+    },
+    {
+      "phase": 3,
+      "title": "Real World",
+      "weeks": "11-16",
+      "minimumWeeks": 6,
+      "goal": "Take training into real environments. Commands work in public.",
+      "skills": {
+        "both": [
+          { "id": "public-practice", "name": "Public practice", "desc": "Pet stores, parks, parking lots, outdoor cafés" },
+          { "id": "other-adults", "name": "Other adults give commands", "desc": "Luis and others practice — dogs listen to everyone" },
+          { "id": "walk-together", "name": "Walking together", "desc": "Two handlers, two dogs. Start far apart, slowly closer." },
+          { "id": "place-together", "name": "Place together", "desc": "Each dog to her own mat in the same room" },
+          { "id": "doorbell-place", "name": "Doorbell → place", "desc": "Doorbell rings → both go to their mats" }
+        ],
+        "apollo": [
+          { "id": "reactivity-check", "name": "Reactivity progress check", "desc": "Is she less reactive than when we started?" },
+          { "id": "professional-needed", "name": "Professional assessment?", "desc": "If not improving after 6-8 weeks — bring in a CPDT-KA trainer" }
+        ],
+        "artemis": [
+          { "id": "sustained-focus", "name": "Sustained focus", "desc": "Eye contact with Diana 30-60 sec with distractions" },
+          { "id": "settle-cue", "name": "Settle on cue", "desc": "Lie quietly at Diana's feet for extended periods" },
+          { "id": "under", "name": "Under command", "desc": "Lie calmly under a chair or table on command" },
+          { "id": "leave-food-floor", "name": "Leave food on floor", "desc": "Leave it works with food on the ground in public" },
+          { "id": "stranger-neutral", "name": "Stranger neutrality", "desc": "No barking, no pulling, no soliciting attention. Just calm." },
+          { "id": "psd-readiness", "name": "PSD readiness check", "desc": "Focused on Diana? Bounces back from surprises? Calm in public?" }
+        ]
+      },
+      "dailySubset": 8
+    }
+  ],
+  "rotatingTips": [
+    "Train them one at a time — always 🐾",
+    "5-10 minutes per session. Stop before they get bored.",
+    "Always end on a win!",
+    "Apollo is scared, not bad. Patience is the plan. 💛",
+    "A 15-minute walk with a loose leash beats a 45-minute pulling battle.",
+    "If it's going badly — stop, breathe, start over with something simple.",
+    "Two short sessions beats one long one, every time.",
+    "Don't train a dog that's too excited, too hungry, or just finished running.",
+    "Cap exercise at 25 minutes per session — their bones are still growing.",
+    "Keep a treat pouch on your hip. Treats should be pea-sized.",
+    "Solo walks build confidence and independence from her sister.",
+    "Each dog needs 10-15 minutes alone with you every day."
+  ],
+  "trainers": ["Diana", "Luis", "Both"]
+}

@@ -135,6 +135,12 @@ textarea, input { font-family: inherit; }
   100% { transform: scale(1); }
 }
 
+/* Skeleton shimmer loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* ── Utility Classes ────────────────────────────────────────── */
 .fade-up { animation: fade-up 0.25s ease-out both; }
 
@@ -175,6 +181,14 @@ textarea, input { font-family: inherit; }
   background: transparent;
   border: 2px solid var(--primary);
   color: var(--primary);
+}
+
+/* ── Skeleton loading ────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #F0E8E0 25%, #F8F4F0 50%, #F0E8E0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 10px;
 }
 
 /* ── Safe area padding ──────────────────────────────────────── */

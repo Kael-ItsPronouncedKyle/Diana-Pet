@@ -26,6 +26,34 @@ function getTip() {
   return tips[idx]
 }
 
+// Per-dog color palettes
+const DOG_COLORS = {
+  apollo: {
+    headerBg: '#FFF8E1',
+    headerBorder: '#F0A030',
+    accent: '#E8900E',
+    accentLight: '#FDE8C4',
+    tipBg: '#FFF3CC',
+    tipBorder: '#F0A030',
+    tipText: '#C07010',
+    skillDone: '#FDE8C4',
+    skillDoneBorder: '#F0A030',
+    badge: '#F0A030',
+  },
+  artemis: {
+    headerBg: C.primaryLight,
+    headerBorder: C.primary,
+    accent: C.primary,
+    accentLight: C.primaryLight,
+    tipBg: C.primaryLight,
+    tipBorder: C.primary,
+    tipText: C.primary,
+    skillDone: C.primaryLight,
+    skillDoneBorder: C.primary,
+    badge: C.primary,
+  },
+}
+
 function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
   const skills = useMemo(() => getDailySkills(phase, dogKey), [phase, dogKey])
   const dogData = daily?.puppies?.[dogKey] || {}
@@ -34,6 +62,7 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
   const [notes, setNotes] = useState(dogData.notes || '')
   const [triggers, setTriggers] = useState(dogData.triggers || [])
   const [newTrigger, setNewTrigger] = useState({ what: '', distance: '', reaction: 3 })
+  const dc = DOG_COLORS[dogKey] || DOG_COLORS.artemis
 
   const toggleSkill = (id) => {
     const next = { ...practised, [id]: !practised[id] }
@@ -58,18 +87,21 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 36 }}>{dog.emoji}</span>
-        <div>
+      {/* Header — colored by dog personality */}
+      <div style={{ background: dc.headerBg, borderRadius: 20, padding: '16px 18px', marginBottom: 14, border: `2px solid ${dc.headerBorder}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 40 }}>{dog.emoji}</span>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: C.text }}>{dog.name}</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, lineHeight: 1.4, maxWidth: 260 }}>{dog.personality}</div>
+          <div style={{ display: 'inline-block', background: dc.badge + '22', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800, color: dc.badge, marginTop: 4, marginBottom: 4 }}>
+            {dogKey === 'apollo' ? 'fearful but brave 💛' : 'bold and learning 💚'}
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, lineHeight: 1.4 }}>{dog.personality}</div>
         </div>
       </div>
 
       {/* Rotating tip */}
-      <div style={{ ...card, background: C.primaryLight, border: `2px solid ${C.primary}` }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: C.primary, marginBottom: 4, letterSpacing: 0.5 }}>TIP</div>
+      <div style={{ ...card, background: dc.tipBg, border: `2px solid ${dc.tipBorder}` }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: dc.tipText, marginBottom: 4, letterSpacing: 0.5 }}>TIP</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{getTip()}</div>
       </div>
 
@@ -77,11 +109,14 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Today's skills</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.textLight }}>{doneCount}/{skills.length} done</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: dc.badge }}>{doneCount}/{skills.length} done</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {skills.map(skill => (
-            <button key={skill.id} onClick={() => toggleSkill(skill.id)} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 14, border: `2px solid ${practised[skill.id] ? C.green : '#F0E8E0'}`, background: practised[skill.id] ? C.greenBg : 'white', cursor: 'pointer', textAlign: 'left' }}>
+            <button key={skill.id} onClick={() => toggleSkill(skill.id)} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 14, border: `2px solid ${practised[skill.id] ? dc.skillDoneBorder : '#F0E8E0'}`, background: practised[skill.id] ? dc.skillDone : 'white', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.1s' }}
+              onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
+              onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
               <span style={{ fontSize: 20, marginTop: 2 }}>{practised[skill.id] ? '✅' : '⬜'}</span>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{skill.name}</div>
@@ -168,10 +203,12 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate }
       <div style={{ display: 'flex', gap: 0, background: '#FFF8F3', borderBottom: '1px solid #F0E8E0' }}>
         {['apollo', 'artemis'].map(dk => {
           const dog = PUPPY_DATA.dogs[dk]
+          const dc = DOG_COLORS[dk]
+          const isActive = activeDog === dk
           return (
-            <button key={dk} onClick={() => setActiveDog(dk)} style={{ flex: 1, padding: '12px 8px', border: 'none', background: activeDog === dk ? 'white' : '#FFF8F3', borderBottom: activeDog === dk ? '3px solid #6BA89E' : '3px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button key={dk} onClick={() => setActiveDog(dk)} style={{ flex: 1, padding: '12px 8px', border: 'none', background: isActive ? 'white' : '#FFF8F3', borderBottom: `3px solid ${isActive ? dc.badge : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <span style={{ fontSize: 20 }}>{dog.emoji}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: activeDog === dk ? C.primary : C.textLight }}>{dog.name}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: isActive ? dc.badge : C.textLight }}>{dog.name}</span>
             </button>
           )
         })}

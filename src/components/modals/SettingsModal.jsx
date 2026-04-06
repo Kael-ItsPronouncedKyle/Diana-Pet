@@ -37,8 +37,24 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
     onProfileUpdate({ schizoModule: !profile?.schizoModule })
   }
 
-  const advancePhase = (phase) => {
-    if (phase < 1 || phase > 3) return
+  // Phase advancement with minimum-week gate
+  const getWeeksInPhase = () => {
+    if (!profile?.puppyPhaseStartDate) return 0
+    return Math.floor((Date.now() - new Date(profile.puppyPhaseStartDate).getTime()) / (7 * 86400000))
+  }
+
+  const getMinWeeksForPhase = (phase) => {
+    const minimums = { 1: 4, 2: 6, 3: 6 }
+    return minimums[phase] || 4
+  }
+
+  const setPhase = (phase) => {
+    const currentPhase = profile?.puppyPhase || 1
+    const weeksInPhase = getWeeksInPhase()
+    const minWeeks = getMinWeeksForPhase(currentPhase)
+
+    // Allow going back freely, but gate going forward
+    if (phase > currentPhase && weeksInPhase < minWeeks) return
     onProfileUpdate({ puppyPhase: phase, puppyPhaseStartDate: new Date().toISOString().slice(0, 10) })
   }
 
@@ -47,6 +63,9 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
     await Promise.all(keys.map(k => storage.delete(k)))
     window.location.reload()
   }
+
+  const currentPhase = profile?.puppyPhase || 1
+  const weeksInPhase = getWeeksInPhase()
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,53,53,0.7)', display: 'flex', alignItems: 'flex-end' }}
@@ -97,15 +116,44 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
             </div>
           </div>
 
-          {/* Puppy phase */}
+          {/* Puppy phase — with minimum-week gating */}
           <div style={card}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 10 }}>Training phase</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 4 }}>Training phase</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 12 }}>
+              {weeksInPhase > 0 ? `Week ${weeksInPhase} of Phase ${currentPhase}` : `Phase ${currentPhase} — just started`}
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              {[1, 2, 3].map(p => (
-                <button key={p} onClick={() => advancePhase(p)} style={{ flex: 1, padding: '12px 4px', borderRadius: 14, border: `2px solid ${profile?.puppyPhase === p ? C.primary : '#F0E8E0'}`, background: profile?.puppyPhase === p ? C.primaryLight : 'white', color: profile?.puppyPhase === p ? C.primary : C.text, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-                  Phase {p}
-                </button>
-              ))}
+              {[1, 2, 3].map(p => {
+                const isActive = currentPhase === p
+                const minWeeks = getMinWeeksForPhase(currentPhase)
+                const canAdvance = p <= currentPhase || weeksInPhase >= minWeeks
+                const weeksNeeded = !canAdvance ? minWeeks - weeksInPhase : 0
+
+                return (
+                  <div key={p} style={{ flex: 1 }}>
+                    <button
+                      onClick={() => setPhase(p)}
+                      disabled={!canAdvance}
+                      style={{
+                        width: '100%', padding: '12px 4px', borderRadius: 14,
+                        border: `2px solid ${isActive ? C.primary : canAdvance ? '#F0E8E0' : '#E8E0D8'}`,
+                        background: isActive ? C.primaryLight : canAdvance ? 'white' : '#F8F6F4',
+                        color: isActive ? C.primary : canAdvance ? C.text : C.textLight,
+                        fontSize: 14, fontWeight: 800,
+                        cursor: canAdvance ? 'pointer' : 'not-allowed',
+                        opacity: canAdvance ? 1 : 0.6,
+                      }}
+                    >
+                      Phase {p}
+                    </button>
+                    {weeksNeeded > 0 && (
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.textLight, textAlign: 'center', marginTop: 4 }}>
+                        {weeksNeeded}w more
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -114,17 +162,26 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
             {saved ? 'Saved! ✓' : 'Save settings'}
           </button>
 
-          {/* Reset */}
-          <div style={{ ...card, border: `2px solid ${C.red}`, background: C.redBg }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>Reset all data</div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 12, lineHeight: 1.5 }}>This deletes everything — your creature, check-ins, streaks. It can't be undone.</p>
-            {!confirmReset && <button onClick={() => setConfirmReset(true)} style={{ width: '100%', padding: '12px', borderRadius: 14, border: 'none', background: C.red, color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>Reset everything</button>}
+          {/* Reset — softened: no colored card, just a subtle section */}
+          <div style={{ ...card, border: '1px solid #F0E8E0', background: 'white' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: C.textLight, marginBottom: 4 }}>Danger zone</div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.5 }}>
+              Reset all data — this deletes everything and cannot be undone.
+            </p>
+            {!confirmReset && (
+              <button
+                onClick={() => setConfirmReset(true)}
+                style={{ background: 'none', border: 'none', color: C.red, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '4px 0', textDecoration: 'underline' }}
+              >
+                Delete all my data
+              </button>
+            )}
             {confirmReset && !confirmReset2 && (
               <div>
                 <p style={{ fontSize: 14, fontWeight: 800, color: C.red, marginBottom: 10 }}>Are you sure? This can't be undone.</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setConfirmReset(false)} style={{ flex: 1, padding: '12px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: C.text, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={() => setConfirmReset2(true)} style={{ flex: 1, padding: '12px', borderRadius: 14, border: 'none', background: C.red, color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>Yes, reset</button>
+                  <button onClick={() => setConfirmReset2(true)} style={{ flex: 1, padding: '12px', borderRadius: 14, border: `2px solid ${C.red}`, background: 'white', color: C.red, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>Yes, reset</button>
                 </div>
               </div>
             )}

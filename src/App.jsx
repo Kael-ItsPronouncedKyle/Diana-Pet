@@ -37,7 +37,9 @@ export default function App() {
   const [subView, setSubView] = useState(null)
   const [showCrisis, setShowCrisis] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [eventMessage, setEventMessage] = useState(null)
+
+  // Persistent message queue — stores up to 5 recent event messages
+  const [msgQueue, setMsgQueue] = useState([])
 
   // Load on mount
   useEffect(() => {
@@ -63,14 +65,56 @@ export default function App() {
     })
   }, [])
 
+  // Add message to queue (deduplicate consecutive identical messages)
+  const addMsg = useCallback((msg) => {
+    if (!msg) return
+    setMsgQueue(prev => {
+      if (prev[prev.length - 1] === msg) return prev
+      return [...prev, msg].slice(-5)
+    })
+  }, [])
+
+  // Dismiss the current (first) message
+  const handleMsgRead = useCallback(() => {
+    setMsgQueue(prev => prev.slice(1))
+  }, [])
+
+  // Streak with grace day: one missed day per 7 days doesn't break streak
   const updateStreak = useCallback(async (p) => {
     const t = today()
     if (p.lastCheckIn === t) return p
+
     const yest = new Date()
     yest.setDate(yest.getDate() - 1)
     const yStr = yest.toISOString().slice(0, 10)
-    const streak = p.lastCheckIn === yStr ? (p.streak || 0) + 1 : 1
-    const next = { ...p, streak, lastCheckIn: t }
+
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+    const twoDaysAgoStr = twoDaysAgo.toISOString().slice(0, 10)
+
+    // Grace day available if not used in the past 7 days
+    const graceAvailable = !p.graceUsedDate || (() => {
+      const diff = Math.floor((Date.now() - new Date(p.graceUsedDate).getTime()) / 86400000)
+      return diff >= 7
+    })()
+
+    let streak, graceUsed = false
+    if (p.lastCheckIn === yStr) {
+      streak = (p.streak || 0) + 1
+    } else if (p.lastCheckIn === twoDaysAgoStr && graceAvailable) {
+      // Grace day: treat the missed day as covered
+      streak = (p.streak || 0) + 1
+      graceUsed = true
+    } else {
+      streak = 1
+    }
+
+    const next = {
+      ...p,
+      streak,
+      lastCheckIn: t,
+      ...(graceUsed ? { graceUsedDate: t } : {}),
+    }
     await saveProfile(next)
     return next
   }, [saveProfile])
@@ -83,16 +127,16 @@ export default function App() {
       // Fire event messages for key milestones
       if (patch.circles?.choice && !prev.circles?.choice) {
         const msg = EVENT_MESSAGES[`circles_${patch.circles.choice}`]
-        if (msg) setEventMessage(msg)
+        if (msg) addMsg(msg)
       }
-      if (patch.meds?.morning === true && !prev.meds?.morning) setEventMessage(EVENT_MESSAGES.meds_morning)
-      if (patch.meds?.evening === true && !prev.meds?.evening) setEventMessage(EVENT_MESSAGES.meds_evening)
-      if (patch.water?.count >= 8 && (prev.water?.count || 0) < 8) setEventMessage(EVENT_MESSAGES.water_goal)
-      if (patch.dbt?.practiced && !prev.dbt?.practiced) setEventMessage(EVENT_MESSAGES.dbt_practiced)
-      if (patch.urges && patch.urges.length > (prev.urges?.length || 0)) setEventMessage(EVENT_MESSAGES.urge_logged)
-      if (patch.energy !== undefined && patch.energy <= 2 && prev.energy === undefined) setEventMessage(EVENT_MESSAGES.energy_crashed)
-      if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) setEventMessage(EVENT_MESSAGES.energy_great)
-      if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) setEventMessage(EVENT_MESSAGES.sleep_bad)
+      if (patch.meds?.morning === true && !prev.meds?.morning) addMsg(EVENT_MESSAGES.meds_morning)
+      if (patch.meds?.evening === true && !prev.meds?.evening) addMsg(EVENT_MESSAGES.meds_evening)
+      if (patch.water?.count >= 8 && (prev.water?.count || 0) < 8) addMsg(EVENT_MESSAGES.water_goal)
+      if (patch.dbt?.practiced && !prev.dbt?.practiced) addMsg(EVENT_MESSAGES.dbt_practiced)
+      if (patch.urges && patch.urges.length > (prev.urges?.length || 0)) addMsg(EVENT_MESSAGES.urge_logged)
+      if (patch.energy !== undefined && patch.energy <= 2 && prev.energy === undefined) addMsg(EVENT_MESSAGES.energy_crashed)
+      if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) addMsg(EVENT_MESSAGES.energy_great)
+      if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) addMsg(EVENT_MESSAGES.sleep_bad)
 
       // Update streak if first check-in today
       const hadAny = countCheckIns(prev) > 0
@@ -103,12 +147,11 @@ export default function App() {
 
       return next
     })
-  }, [profile, updateStreak])
+  }, [profile, updateStreak, addMsg])
 
   // Navigation handler used by HomeTab and other tabs
   const handleNavigate = useCallback((targetTab, targetSub) => {
     if (targetTab === '__updateDaily') {
-      // Special: HomeTab passes word-of-day updates this way
       updateDaily(targetSub)
       return
     }
@@ -136,6 +179,8 @@ export default function App() {
   }
 
   const checkInCount = countCheckIns(daily)
+  // Total trackable check-in sections (used for progress ring)
+  const TOTAL_CHECKINS = 8
 
   const renderTab = () => {
     switch (tab) {
@@ -145,7 +190,7 @@ export default function App() {
             profile={profile}
             daily={daily}
             onNavigate={handleNavigate}
-            onEventMessage={setEventMessage}
+            onEventMessage={addMsg}
           />
         )
       case 'recovery':
@@ -197,7 +242,10 @@ export default function App() {
           fontSize: 20, cursor: 'pointer',
           boxShadow: '0 2px 12px rgba(61,53,53,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.1s',
         }}
+        onTouchStart={e => e.currentTarget.style.transform = 'scale(0.92)'}
+        onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
       >
         ⚙️
       </button>
@@ -206,16 +254,26 @@ export default function App() {
       {tab === 'home' && (
         <Pet
           checkInCount={checkInCount}
+          totalCheckIns={TOTAL_CHECKINS}
           creatureId={profile.creature}
           creatureName={profile.creatureName}
           streak={profile.streak || 0}
-          eventMessage={eventMessage}
-          onEventMessageShown={() => setEventMessage(null)}
+          msgQueue={msgQueue}
+          onMsgRead={handleMsgRead}
         />
       )}
 
-      {/* Tab content */}
-      <div style={{ flex: 1, overflowY: tab === 'home' ? 'auto' : 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Tab content — key on tab so it re-mounts and triggers fade-up animation */}
+      <div
+        key={tab}
+        style={{
+          flex: 1,
+          overflowY: tab === 'home' ? 'auto' : 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'fade-up 0.2s ease-out',
+        }}
+      >
         {renderTab()}
       </div>
 

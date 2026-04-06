@@ -17,27 +17,51 @@ const btn = (active, color = C.primary) => ({
 })
 
 // ─── Sleep ──────────────────────────────────────────────────────────────────
-const BEDTIMES = ['6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM','1 AM','2 AM','3 AM','4 AM']
-const WAKETIMES = ['4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM']
 const SLEEP_QUALITY = [
   { v: 1, emoji: '😴', label: 'Terrible' }, { v: 2, emoji: '😕', label: 'Not great' },
   { v: 3, emoji: '😐', label: 'Okay' }, { v: 4, emoji: '😊', label: 'Good' }, { v: 5, emoji: '🌟', label: 'Amazing' },
 ]
 const WAKEUPS = ['No', 'Once', 'A few times', 'A lot']
 
+// Parse "HH:MM" or legacy "10 PM" strings → total minutes since midnight
+function parseTimeToMinutes(str) {
+  if (!str) return null
+  if (str.includes(':')) {
+    const [h, m] = str.split(':').map(Number)
+    return h * 60 + (m || 0)
+  }
+  // Legacy format fallback: "10 PM", "7 AM", "12 AM", etc.
+  const match = str.match(/(\d+)\s*(AM|PM)/i)
+  if (!match) return null
+  let h = parseInt(match[1])
+  if (match[2].toUpperCase() === 'PM' && h !== 12) h += 12
+  if (match[2].toUpperCase() === 'AM' && h === 12) h = 0
+  return h * 60
+}
+
 function calcHours(bedStr, wakeStr) {
-  const bedH = parseInt(bedStr) || 22
-  const wakeH = parseInt(wakeStr) || 7
-  const bed = bedH >= 18 ? bedH - 24 : bedH
-  let h = wakeH - bed
-  if (h < 0) h += 24
-  return Math.round(h * 10) / 10
+  const bed = parseTimeToMinutes(bedStr)
+  const wake = parseTimeToMinutes(wakeStr)
+  if (bed === null || wake === null) return 0
+  let diff = wake - bed
+  if (diff < 0) diff += 24 * 60
+  return Math.round(diff / 6) / 10
 }
 
 function SleepSection({ daily, onUpdate }) {
   const s = daily?.sleep || {}
-  const [bedtime, setBedtime] = useState(s.bedtime || '10 PM')
-  const [waketime, setWaketime] = useState(s.waketime || '7 AM')
+  // Normalize legacy format to HH:MM for the input
+  const normTime = (val, fallback) => {
+    if (!val) return fallback
+    if (val.includes(':')) return val
+    const mins = parseTimeToMinutes(val)
+    if (mins === null) return fallback
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  }
+  const [bedtime, setBedtime] = useState(normTime(s.bedtime, '22:00'))
+  const [waketime, setWaketime] = useState(normTime(s.waketime, '07:00'))
   const [wakeups, setWakeups] = useState(s.wakeups || null)
   const [quality, setQuality] = useState(s.quality || null)
   const [saved, setSaved] = useState(!!s.quality)
@@ -50,6 +74,13 @@ function SleepSection({ daily, onUpdate }) {
     setSaved(true)
   }
 
+  const timeInputStyle = {
+    width: '100%', padding: '12px 14px', borderRadius: 14,
+    border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700,
+    background: 'white', color: C.text, outline: 'none',
+    fontFamily: 'inherit', WebkitAppearance: 'none',
+  }
+
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
       {saved && quality <= 2 && (
@@ -59,13 +90,19 @@ function SleepSection({ daily, onUpdate }) {
       )}
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>What time did you go to bed?</div>
-        <select value={bedtime} onChange={e => setBedtime(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700, background: 'white', color: C.text, outline: 'none', marginBottom: 16 }}>
-          {BEDTIMES.map(t => <option key={t}>{t}</option>)}
-        </select>
+        <input
+          type="time"
+          value={bedtime}
+          onChange={e => setBedtime(e.target.value)}
+          style={{ ...timeInputStyle, marginBottom: 16 }}
+        />
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>What time did you wake up?</div>
-        <select value={waketime} onChange={e => setWaketime(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700, background: 'white', color: C.text, outline: 'none', marginBottom: 12 }}>
-          {WAKETIMES.map(t => <option key={t}>{t}</option>)}
-        </select>
+        <input
+          type="time"
+          value={waketime}
+          onChange={e => setWaketime(e.target.value)}
+          style={{ ...timeInputStyle, marginBottom: 12 }}
+        />
         <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 900, color: C.primary, marginBottom: 16 }}>
           {hours} hours slept
         </div>

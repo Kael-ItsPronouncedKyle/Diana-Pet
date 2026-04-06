@@ -29,7 +29,45 @@ function SparkleParticles() {
   )
 }
 
-export default function PetCreature({ creatureId, moodState, size = 90, streak = 0 }) {
+// SVG progress ring showing today's check-in progress
+function ProgressRing({ done, total, size }) {
+  const ringSize = size + 48 // outer container size
+  const center = ringSize / 2
+  const radius = (ringSize - 14) / 2
+  const circumference = 2 * Math.PI * radius
+  const progress = total > 0 ? Math.min(done / total, 1) : 0
+  const offset = circumference - progress * circumference
+  const isComplete = done >= total
+
+  return (
+    <svg
+      width={ringSize}
+      height={ringSize}
+      style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)', pointerEvents: 'none' }}
+    >
+      {/* Background track */}
+      <circle
+        cx={center} cy={center} r={radius}
+        fill="none"
+        stroke="#F0E8E0"
+        strokeWidth={6}
+      />
+      {/* Progress arc */}
+      <circle
+        cx={center} cy={center} r={radius}
+        fill="none"
+        stroke={isComplete ? '#F0C050' : '#6BA89E'}
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.4s ease' }}
+      />
+    </svg>
+  )
+}
+
+export default function PetCreature({ creatureId, moodState, size = 90, streak = 0, checkInCount = 0, totalCheckIns = 8, pendingMsgs = 0 }) {
   const creature = useMemo(
     () => CREATURES.find(c => c.id === creatureId) || CREATURES[0],
     [creatureId]
@@ -51,9 +89,13 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
   }, [moodState])
 
   const showSparkles = moodState === 'glow'
+  const containerSize = size + 48
 
   return (
-    <div style={{ position: 'relative', width: size + 40, height: size + 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: containerSize, height: containerSize, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Progress ring */}
+      <ProgressRing done={checkInCount} total={totalCheckIns} size={size} />
+
       {/* Sparkle particles orbit */}
       {showSparkles && <SparkleParticles />}
 
@@ -102,6 +144,48 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
           whiteSpace: 'nowrap',
         }}>
           🔥{streak}
+        </div>
+      )}
+
+      {/* Pending messages dot */}
+      {pendingMsgs > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: 6,
+          left: 6,
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          background: '#E8907E',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 10,
+          fontWeight: 900,
+          color: 'white',
+          border: '2px solid white',
+        }}>
+          {pendingMsgs}
+        </div>
+      )}
+
+      {/* Check-in count label (bottom of ring) */}
+      {checkInCount > 0 && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: checkInCount >= totalCheckIns ? '#FFF8E1' : 'white',
+          border: `1.5px solid ${checkInCount >= totalCheckIns ? '#F0C050' : '#E8F4F1'}`,
+          borderRadius: 10,
+          padding: '1px 7px',
+          fontSize: 10,
+          fontWeight: 800,
+          color: checkInCount >= totalCheckIns ? '#C09020' : '#6BA89E',
+          whiteSpace: 'nowrap',
+        }}>
+          {checkInCount}/{totalCheckIns}
         </div>
       )}
     </div>

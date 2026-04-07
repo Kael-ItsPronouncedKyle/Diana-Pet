@@ -113,7 +113,21 @@ function WordOfDay({ daily, onUpdate }) {
     saveFeedback()
   }
 
-  if (!word) return null
+  // Show a placeholder card while the word is loading
+  if (!word) return (
+    <div style={{
+      background: 'var(--card, white)', borderRadius: 20, padding: '16px 18px',
+      boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      border: '2px solid transparent', opacity: 0.5,
+    }}>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5, marginBottom: 4 }}>WORD OF THE DAY</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-light, #8A7F7F)' }}>Loading…</div>
+      </div>
+      <div style={{ fontSize: 16 }}>📖</div>
+    </div>
+  )
 
   if (!showDetail) return (
     <div
@@ -328,6 +342,14 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
         </div>
       </div>
 
+      {/* Word of the Day — shown at the top so Diana sees it every morning */}
+      <div style={{ marginBottom: 16 }}>
+        <WordOfDay
+          daily={daily}
+          onUpdate={(patch) => onNavigate('__updateDaily', patch)}
+        />
+      </div>
+
       {/* Clinical awareness banners — consolidated to max ONE non-nighttime banner
           to avoid overwhelming the home screen on hard days.
           Priority: post-discharge+mania combined > mania alone > post-discharge alone */}
@@ -465,14 +487,6 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
           <span style={{ fontSize: 14, color: 'var(--primary, #6BA89E)', fontWeight: 700 }}>→</span>
         </button>
       )}
-
-      {/* Word of the Day */}
-      <div style={{ marginBottom: 16 }}>
-        <WordOfDay
-          daily={daily}
-          onUpdate={(patch) => onNavigate('__updateDaily', patch)}
-        />
-      </div>
 
       {/* Collapsible status grid */}
       <div style={{

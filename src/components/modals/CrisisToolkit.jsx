@@ -133,15 +133,57 @@ const COPING_FIELDS = [
   { key: 'reason', label: "The reason I'm doing this work is:", placeholder: 'e.g. because I want to be free, because I deserve better...' },
 ]
 
+const COPING_DRAFT_KEY = 'diana-coping-plan-draft'
+
+function loadCopingDraft() {
+  try {
+    const raw = localStorage.getItem(COPING_DRAFT_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveCopingDraft(values) {
+  try {
+    localStorage.setItem(COPING_DRAFT_KEY, JSON.stringify(values))
+  } catch { /* ignore */ }
+}
+
+function clearCopingDraft() {
+  try {
+    localStorage.removeItem(COPING_DRAFT_KEY)
+  } catch { /* ignore */ }
+}
+
 function CopingPlanSection({ copingPlan, onSave }) {
   const hasPlan = copingPlan && Object.values(copingPlan).some(v => v && v.trim())
+  const draft = loadCopingDraft()
+  const hasDraft = draft && Object.values(draft).some(v => v && v.trim())
   const [editing, setEditing] = useState(!hasPlan)
   const [values, setValues] = useState(copingPlan || {})
+  const [showDraftPrompt, setShowDraftPrompt] = useState(hasDraft && !hasPlan)
 
-  const set = (key, val) => setValues(prev => ({ ...prev, [key]: val }))
+  const set = (key, val) => {
+    setValues(prev => {
+      const next = { ...prev, [key]: val }
+      saveCopingDraft(next)
+      return next
+    })
+  }
+
+  const restoreDraft = () => {
+    if (draft) setValues(draft)
+    setShowDraftPrompt(false)
+  }
+
+  const dismissDraft = () => {
+    clearCopingDraft()
+    setShowDraftPrompt(false)
+  }
 
   const save = () => {
     onSave(values)
+    clearCopingDraft()
     setEditing(false)
   }
 
@@ -175,6 +217,35 @@ function CopingPlanSection({ copingPlan, onSave }) {
 
   return (
     <div>
+      {showDraftPrompt && (
+        <div style={{ background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16, padding: '14px', marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text, #3D3535)', marginBottom: 10, lineHeight: 1.5 }}>
+            Looks like you started this before. Want to pick up where you left off?
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={restoreDraft}
+              style={{
+                flex: 1, padding: '10px', borderRadius: 12, border: 'none',
+                background: '#6BA89E', color: 'white', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', minHeight: 44,
+              }}
+            >
+              Yes, continue
+            </button>
+            <button
+              onClick={dismissDraft}
+              style={{
+                flex: 1, padding: '10px', borderRadius: 12, border: '2px solid #F0E8E0',
+                background: 'white', color: '#8A7F7F', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', minHeight: 44,
+              }}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
       <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', marginBottom: 16, lineHeight: 1.5 }}>
         {hasPlan ? 'Update your coping plan.' : "Let's build your coping plan. Fill in what works for YOU. You can use voice-to-text."}
       </p>

@@ -362,7 +362,7 @@ export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) 
 
       {!isLastStep && (
         <button
-          onClick={() => { onProfileUpdate({ safetyPlan: { ...plan } }); onClose() }}
+          onClick={() => { onProfileUpdate({ safetyPlan: { ...plan } }); saveDraft(plan, step); onClose() }}
           style={{
             width: '100%', padding: '12px', borderRadius: 14, border: 'none',
             background: 'transparent', color: C.textLight,

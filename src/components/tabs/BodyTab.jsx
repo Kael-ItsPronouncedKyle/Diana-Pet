@@ -445,22 +445,27 @@ function WeeklySection({ profile }) {
   const [mAnswers, setMAnswers] = useState({})
   const [dAnswers, setDAnswers] = useState({})
   const [sAnswers, setSAnswers] = useState({})
+  const [phq2, setPhq2] = useState({ q1: null, q2: null })
   const [submitted, setSubmitted] = useState(false)
   const [result, setResult] = useState(null)
 
   useEffect(() => {
-    storage.get(key).then(d => { if (d) { setExisting(d); setResult(d) } })
+    storage.get(key).then(d => { if (d) { setExisting(d); setResult(d); if (d.phq2) setPhq2(d.phq2) } })
   }, [key])
 
   const setM = (i, v) => setMAnswers(prev => ({ ...prev, [i]: v }))
   const setD = (i, v) => setDAnswers(prev => ({ ...prev, [i]: v }))
   const setS = (i, v) => setSAnswers(prev => ({ ...prev, [i]: v }))
 
+  const phq2Total = (phq2.q1 !== null && phq2.q2 !== null) ? phq2.q1 + phq2.q2 : null
+  const phq2Complete = phq2.q1 !== null && phq2.q2 !== null
+
   const submit = async () => {
     const yesCount = Object.values(mAnswers).filter(v => v === 'yes').length
     const dYesCount = Object.values(dAnswers).filter(v => v === 'yes').length
     const sYesCount = Object.values(sAnswers).filter(v => v === 'yes').length
-    const r = { mania: mAnswers, depression: dAnswers, schizo: sAnswers, yesCount, dYesCount, sYesCount, date: today() }
+    const phq2Data = phq2Complete ? { q1: phq2.q1, q2: phq2.q2, total: phq2Total, date: today() } : null
+    const r = { mania: mAnswers, depression: dAnswers, schizo: sAnswers, yesCount, dYesCount, sYesCount, phq2: phq2Data, date: today() }
     await storage.set(key, r)
     setResult(r)
     setSubmitted(true)
@@ -498,6 +503,17 @@ function WeeklySection({ profile }) {
             {result.dYesCount >= 4
               ? "Several of these are signs your mood may be dropping. You deserve support right now. Please reach out to your team this week."
               : "Some low-mood signs this week. That's worth noticing. Be gentle with yourself, and tell someone if it gets heavier."}
+          </p>
+        </div>
+      )}
+      {result.phq2 && (
+        <div style={{ ...card, background: result.phq2.total >= 3 ? C.yellowBg : C.greenBg, border: `2px solid ${result.phq2.total >= 3 ? C.yellow : C.green}` }}>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>{result.phq2.total >= 3 ? '💛' : '💚'}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.textLight, marginBottom: 6 }}>Sadness check: {result.phq2.total}/6</div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>
+            {result.phq2.total >= 3
+              ? "It sounds like things have been really hard. Talking to your therapist about this could help."
+              : "You're doing okay here. That's good to notice."}
           </p>
         </div>
       )}

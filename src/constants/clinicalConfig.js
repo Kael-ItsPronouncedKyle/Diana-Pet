@@ -323,6 +323,8 @@ export function detectSubstitution(weekData) {
     substances: daysList.filter(d =>
       d.substanceUse?.alcohol || d.substanceUse?.weed || d.substanceUse?.smoking
     ).length,
+    dbtSkills: daysList.filter(d => d.dbt?.practiced).length,
+    checkIns: daysList.filter(d => d.checkIns?.count > 0 || d.circles?.choice).length,
   })
 
   const early = channelActivity(firstHalf)

@@ -457,8 +457,9 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
     >
       <div style={{
         background: 'var(--bg, #FFF8F3)', width: '100%', maxWidth: 430, margin: '0 auto',
-        borderRadius: '24px 24px 0 0', maxHeight: '92dvh',
+        borderRadius: '24px 24px 0 0', maxHeight: '95vh',
         display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
         animation: 'fade-up 0.25s ease-out',
       }}>
         {/* Header */}
@@ -506,7 +507,7 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '20px', paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
           {renderSection()}
         </div>
       </div>

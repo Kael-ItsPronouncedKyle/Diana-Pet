@@ -23,8 +23,8 @@ function isLuisWorking(profile) {
   const today = new Date()
   const dayOfWeek = today.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
 
-  // Default: Thu(4), Fri(5), Sat(6), Sun(0)
-  const workDays = [0, 4, 5, 6]
+  // Use profile's custom work days, or default: Thu(4), Fri(5), Sat(6), Sun(0)
+  const workDays = profile.luisShift?.workDays || [0, 4, 5, 6]
   return workDays.includes(dayOfWeek)
 }
 
@@ -53,12 +53,13 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
     }
   }
 
-  // Nighttime alone (general)
-  if (isNight && !luisWorking) {
+  // Nighttime companion (non-clinical — Luis is home, lower priority so earned
+  // affirmations and coaching still show through)
+  if (isNight && !luisWorking && countCheckIns(daily) === 0) {
     return {
       message: "It's late. I'm staying up with you. 💚",
-      priority: 2,
-      type: 'clinical',
+      priority: 6,
+      type: 'companion',
     }
   }
 
@@ -73,7 +74,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   }
 
   // Short sleep but high energy (mania flag)
-  if (daily.sleep && daily.sleep < 5 && daily.sleepQuality && daily.sleepQuality >= 4) {
+  if (daily.sleep?.hours && daily.sleep.hours < 5 && daily.sleep?.quality && daily.sleep.quality >= 4) {
     return {
       message: "Short sleep but you feel great? Watch that. Sometimes that's mania knocking.",
       priority: 2,
@@ -82,7 +83,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   }
 
   // Short sleep (general)
-  if (daily.sleep && daily.sleep < 5) {
+  if (daily.sleep?.hours && daily.sleep.hours < 5) {
     return {
       message: "Short night. Your brain needs sleep to stay steady. Be gentle today.",
       priority: 2,
@@ -150,7 +151,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   }
 
   // Inner circle day (hard day, true report)
-  if (daily.circles === 'inner') {
+  if (daily.circles?.choice === 'inner') {
     return {
       message: "Hard day. You're still here. You told the truth. That's not nothing.",
       priority: 4,
@@ -159,7 +160,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   }
 
   // Middle circle day (caught warning sign)
-  if (daily.circles === 'middle') {
+  if (daily.circles?.choice === 'middle') {
     return {
       message: "You caught the warning sign. That IS the skill.",
       priority: 4,
@@ -170,7 +171,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   // --- PRIORITY 5: SKILL NUDGE ---
 
   // Window of tolerance: hyperaroused
-  if (daily.windowOfTolerance && daily.windowOfTolerance >= 6) {
+  if (daily.window !== undefined && daily.window !== null && daily.window >= 6) {
     return {
       message: "Your body is revved up. Ice dive, cold water, or paced breathing. Pick one.",
       priority: 5,
@@ -179,7 +180,7 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
   }
 
   // Window of tolerance: hypoaroused
-  if (daily.windowOfTolerance && daily.windowOfTolerance <= 2) {
+  if (daily.window !== undefined && daily.window !== null && daily.window <= 2) {
     return {
       message: "You're shut down. Try moving — even just standing up. Wake your senses up.",
       priority: 5,

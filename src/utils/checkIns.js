@@ -9,7 +9,7 @@ export function countCheckIns(daily) {
   if (daily.circles) n++
   if (daily.emotions && daily.emotions.length > 0) n++
   if (daily.sleep?.quality) n++
-  if (daily.meds?.morning !== undefined && daily.meds?.morning !== null) n++
+  if ((daily.meds?.morning !== undefined && daily.meds?.morning !== null) || (daily.meds?.evening !== undefined && daily.meds?.evening !== null)) n++
   if (daily.energy !== undefined && daily.energy !== null) n++
   if (daily.water?.count > 0) n++
   if (daily.dbt?.practiced) n++
@@ -26,7 +26,7 @@ export function countCheckIns(daily) {
   return n
 }
 
-export const TOTAL_CHECKINS = 18
+export const TOTAL_CHECKINS = 17
 
 // Returns 'sleeping' | 'bounce' | 'wiggle' | 'glow'
 export function getMoodState(checkInCount) {
@@ -48,7 +48,7 @@ export const MILESTONES = [
   { threshold: 3, message: "We're getting started! 🌱", reaction: 'bounce' },
   { threshold: 7, message: "More than halfway! 💪", reaction: 'wiggle' },
   { threshold: 12, message: "Almost there! ✨", reaction: 'celebrate' },
-  { threshold: 18, message: "FULL DAY! You showed up completely! 🌟🎉", reaction: 'celebrate' },
+  { threshold: 17, message: "FULL DAY! You showed up completely! 🌟🎉", reaction: 'celebrate' },
 ]
 
 export function checkMilestone(prevCount, newCount) {

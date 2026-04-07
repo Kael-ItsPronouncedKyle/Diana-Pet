@@ -3,6 +3,7 @@ import { getHour, weekKey, today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 import TopNav from '../shared/TopNav.jsx'
+import { detectTripleRisk } from '../../constants/clinicalConfig.js'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -108,6 +109,28 @@ function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
   const showMorning = hour < 17
   const showEvening = hour >= 12
   const m = daily?.meds || {}
+  const [recentMissedDays, setRecentMissedDays] = useState(0)
+
+  // Check how many of the past 3 days had missed meds
+  useEffect(() => {
+    async function checkRecentMeds() {
+      try {
+        let missed = 0
+        const now = new Date()
+        for (let i = 1; i <= 3; i++) {
+          const d = new Date(now)
+          d.setDate(d.getDate() - i)
+          const dateStr = d.toISOString().slice(0, 10)
+          const data = await storage.get(`diana-daily:${dateStr}`)
+          if (data?.meds?.morning === false || data?.meds?.evening === false) missed++
+        }
+        setRecentMissedDays(missed)
+      } catch {
+        // Storage error — don't show warning
+      }
+    }
+    checkRecentMeds()
+  }, [])
 
   const set = (field, val) => {
     const next = { ...m, [field]: val }
@@ -129,10 +152,19 @@ function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
   )
 
   const medsDone = (m.morning !== undefined || !showMorning) && (m.evening !== undefined || !showEvening) && (m.morning !== undefined || m.evening !== undefined)
+  const showMissedWarning = recentMissedDays >= 2
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
       <BackToHomeBanner show={medsDone && fromHome} onGoHome={onGoHome} />
+      {/* Warm missed-meds note — shown when 2+ recent days were missed */}
+      {showMissedWarning && (
+        <div style={{ ...card, background: C.yellowBg, border: `2px solid ${C.yellow}` }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.5 }}>
+            Your meds help your brain stay steady. Missing them makes everything harder. Can you take them today? 💊
+          </p>
+        </div>
+      )}
       <div style={card}>
         {showMorning && renderMed('Did you take your morning meds? ☀️', 'morning')}
         {showEvening && renderMed('Did you take your evening meds? 🌙', 'evening')}
@@ -700,6 +732,121 @@ function BodySelfSection({ daily, onUpdate, fromHome, onGoHome }) {
   )
 }
 
+// ─── Optional Clinical Check-ins ─────────────────────────────────────────────
+// These track substance use, spending, and self-harm.
+// They are OPTIONAL and do NOT count toward creature mood.
+// Reporting hard truths here should never make the creature sadder.
+// They appear only in this collapsible section — not in the main daily flow.
+
+function ClinicalCheckIns({ daily, onUpdate }) {
+  const d = daily || {}
+  const sub = d.substanceUse || {}
+  const spend = d.spending || {}
+  const sh = d.selfHarm || {}
+
+  const setSubstance = (key, val) => {
+    onUpdate({ substanceUse: { ...sub, [key]: val } })
+  }
+  const setSpending = (key, val) => {
+    onUpdate({ spending: { ...spend, [key]: val } })
+  }
+  const setSelfHarm = (key, val) => {
+    onUpdate({ selfHarm: { ...sh, [key]: val } })
+  }
+
+  return (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <div style={{ ...card, background: '#F8F4F0', border: '2px solid #F0E8E0' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: C.textLight, marginBottom: 4, letterSpacing: 0.5 }}>OPTIONAL CHECK-INS</div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 16, lineHeight: 1.5 }}>
+          These don't change your creature. They just help track your full picture. You can skip any or all of these.
+        </p>
+
+        {/* Substance use */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>Did you use anything today?</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {[
+              { key: 'alcohol', label: '🍺 Alcohol' },
+              { key: 'weed', label: '🌿 Weed' },
+              { key: 'smoking', label: '🚬 Smoking' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setSubstance(key, !sub[key])}
+                style={{
+                  padding: '10px 16px', borderRadius: 20,
+                  border: sub[key] ? `2px solid ${C.yellow}` : '2px solid transparent',
+                  background: sub[key] ? C.yellow + '44' : '#F0E8E0',
+                  color: sub[key] ? C.text : C.textLight,
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {(sub.alcohol || sub.weed || sub.smoking) && (
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.textLight, marginTop: 8 }}>
+              You told the truth. That matters. 💚
+            </p>
+          )}
+        </div>
+
+        {/* Spending */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>Did you spend money in an unusual way today?</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setSpending('unusual', true)}
+              style={{ ...btn(spend.unusual === true, C.yellow), flex: 1 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setSpending('unusual', false)}
+              style={{ ...btn(spend.unusual === false, C.primary), flex: 1 }}
+            >
+              No
+            </button>
+          </div>
+          {spend.unusual === true && (
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.textLight, marginTop: 8 }}>
+              Good to know. Spending patterns are worth tracking. 💙
+            </p>
+          )}
+        </div>
+
+        {/* Self-harm */}
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 10 }}>Did you hurt yourself today?</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setSelfHarm('occurred', true)}
+              style={{ ...btn(sh.occurred === true, C.red), flex: 1 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setSelfHarm('occurred', false)}
+              style={{ ...btn(sh.occurred === false, C.primary), flex: 1 }}
+            >
+              No
+            </button>
+          </div>
+          {sh.occurred === true && (
+            <div style={{ marginTop: 10, background: C.blueBg, borderRadius: 14, padding: '12px 14px', border: `2px solid ${C.blue}` }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.5 }}>
+                You told the truth. That took courage. Your safety plan has people who can be with you right now. 💙
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 const SUBS = [
   { key: 'sleep', label: '💤 Sleep' },
@@ -711,6 +858,7 @@ const SUBS = [
   { key: 'dissociation', label: '🌫 Dissociation' },
   { key: 'bodySelf', label: '💜 Body-Self' },
   { key: 'weekly', label: '📋 Weekly' },
+  { key: 'more', label: '+ More' },
 ]
 
 export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome, onGoHome }) {
@@ -737,6 +885,7 @@ export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome
         {sub === 'dissociation' && <DissociationSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'weekly' && <WeeklySection profile={profile} />}
+        {sub === 'more' && <ClinicalCheckIns daily={daily} onUpdate={onUpdate} />}
       </div>
     </div>
   )

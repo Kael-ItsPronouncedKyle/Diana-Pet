@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { CRISIS_PRESENTATION_WARNING } from '../../constants/clinicalConfig.js'
 
 // Simplified: 4 categories instead of 8
 const SECTIONS = ['quick-calm', 'safety-plan', 'coping-skills', 'contacts']
@@ -345,6 +346,15 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
                 </div>
               </a>
             ))}
+
+            {/* Provider export note — T3-02 will build the full export feature.
+                CRISIS_PRESENTATION_WARNING is available from clinicalConfig.js
+                and must be included in any provider-facing export. */}
+            <div style={{ marginTop: 8, padding: '12px 14px', background: '#F8F4F0', borderRadius: 14, border: '1px dashed #E0D8D0' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', margin: 0, lineHeight: 1.5 }}>
+                📋 Provider export coming soon (Settings → Share with my team)
+              </p>
+            </div>
           </div>
         )
       default:

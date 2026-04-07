@@ -369,7 +369,7 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 100px', animation: 'fade-up 0.25s ease-out' }}>
-        <BackToHomeBanner show={fromHome && !!(daily?.puppies?.[activeDog]?.skills && Object.keys(daily.puppies[activeDog].skills).length > 0)} onGoHome={onGoHome} />
+        <BackToHomeBanner show={fromHome && Object.keys(daily?.puppies?.[activeDog]?.skills || {}).length > 0} onGoHome={onGoHome} />
         <DogSection
           dog={PUPPY_DATA.dogs[activeDog]}
           dogKey={activeDog}

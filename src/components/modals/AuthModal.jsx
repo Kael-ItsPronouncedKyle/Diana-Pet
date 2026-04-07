@@ -10,6 +10,28 @@ export default function AuthModal() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  // Detect OAuth callback — show loading instead of login button while hash is processed
+  const hash = window.location.hash
+  const isOAuthCallback = hash.includes('access_token') || hash.includes('error')
+  const hashError = hash.includes('error_description')
+    ? decodeURIComponent(hash.match(/error_description=([^&]*)/)?.[1] || '')
+    : null
+
+  if (isOAuthCallback && !hashError) {
+    return (
+      <div style={{
+        minHeight: '100dvh', background: '#FFF8F3',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '20px',
+      }}>
+        <div style={{ fontSize: 64, animation: 'pulse 1.5s ease-in-out infinite' }}>🐾</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.textLight, marginTop: 16 }}>
+          Signing you in...
+        </div>
+      </div>
+    )
+  }
+
   const signInWithGoogle = async () => {
     setLoading(true)
     setError(null)
@@ -68,9 +90,9 @@ export default function AuthModal() {
           {loading ? 'Signing in...' : 'Sign in with Google'}
         </button>
 
-        {error && (
+        {(error || hashError) && (
           <p style={{ marginTop: 16, fontSize: 14, fontWeight: 600, color: '#E87B7B' }}>
-            {error}
+            {error || hashError}
           </p>
         )}
 

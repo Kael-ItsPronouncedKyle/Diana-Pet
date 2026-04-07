@@ -271,45 +271,54 @@ const storage = {
 
   // Pull all data from Supabase and merge into localStorage
   // Supabase wins if data exists (cloud is source of truth)
+  // Timeout after 8 seconds to prevent blocking the app
   async sync() {
     if (!supabaseEnabled || !supabase || !_userId) return
 
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('sync timeout')), 8000)
+    )
+
     try {
-      // Sync profile
-      const { data: profileRow } = await supabase
-        .from('profiles')
-        .select('data')
-        .eq('user_id', _userId)
-        .maybeSingle()
-      if (profileRow?.data) {
-        const encrypted = await encryptString(JSON.stringify(profileRow.data))
-        localStorage.setItem('diana-profile', encrypted)
-      }
-
-      // Sync daily entries
-      const { data: dailyRows } = await supabase
-        .from('daily_entries')
-        .select('date, data')
-        .eq('user_id', _userId)
-      if (dailyRows) {
-        for (const row of dailyRows) {
-          const encrypted = await encryptString(JSON.stringify(row.data))
-          localStorage.setItem(`diana-daily:${row.date}`, encrypted)
-        }
-      }
-
-      // Sync app data
-      const { data: appRows } = await supabase
-        .from('app_data')
-        .select('key, data')
-        .eq('user_id', _userId)
-      if (appRows) {
-        for (const row of appRows) {
-          localStorage.setItem(row.key, JSON.stringify(row.data))
-        }
-      }
+      await Promise.race([this._doSync(), timeout])
     } catch {
-      // Sync failed — continue with localStorage data
+      // Sync failed or timed out — continue with localStorage data
+    }
+  },
+
+  async _doSync() {
+    // Sync profile
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('data')
+      .eq('user_id', _userId)
+      .maybeSingle()
+    if (profileRow?.data) {
+      const encrypted = await encryptString(JSON.stringify(profileRow.data))
+      localStorage.setItem('diana-profile', encrypted)
+    }
+
+    // Sync daily entries
+    const { data: dailyRows } = await supabase
+      .from('daily_entries')
+      .select('date, data')
+      .eq('user_id', _userId)
+    if (dailyRows) {
+      for (const row of dailyRows) {
+        const encrypted = await encryptString(JSON.stringify(row.data))
+        localStorage.setItem(`diana-daily:${row.date}`, encrypted)
+      }
+    }
+
+    // Sync app data
+    const { data: appRows } = await supabase
+      .from('app_data')
+      .select('key, data')
+      .eq('user_id', _userId)
+    if (appRows) {
+      for (const row of appRows) {
+        localStorage.setItem(row.key, JSON.stringify(row.data))
+      }
     }
   },
 }

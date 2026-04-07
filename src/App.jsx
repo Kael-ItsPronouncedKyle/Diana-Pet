@@ -97,15 +97,18 @@ export default function App() {
       async (event, session) => {
         if (session?.user) {
           storage.setUserId(session.user.id)
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            await storage.sync()
-          }
+          // Set auth state first so the app doesn't hang if sync is slow
           setAuthed(true)
+          setAuthReady(true)
+          // Sync in the background — don't block the UI
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            storage.sync().catch(() => {})
+          }
         } else {
           storage.setUserId(null)
           setAuthed(false)
+          setAuthReady(true)
         }
-        setAuthReady(true)
       }
     )
 

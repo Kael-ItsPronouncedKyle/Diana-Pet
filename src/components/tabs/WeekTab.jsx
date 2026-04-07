@@ -9,6 +9,8 @@ const card = { background: 'var(--card)', borderRadius: 20, padding: '20px', box
 const CIRCLE_COLORS = { outer: 'var(--green)', middle: 'var(--yellow)', inner: 'var(--red)' }
 const ENERGY_EMOJIS = { 1: '😴', 2: '🥱', 3: '😐', 4: '😊', 5: '🌟' }
 
+const CIRCLE_LABELS = { outer: 'green circle', middle: 'yellow circle', inner: 'red circle' }
+
 function DayCell({ dateStr, data }) {
   const circle = data?.circles?.choice
   const circleColor = circle ? CIRCLE_COLORS[circle] : '#E0D8D0'
@@ -28,8 +30,12 @@ function DayCell({ dateStr, data }) {
   else if (dbt) primaryEmoji = '💚'
   else if (puppies) primaryEmoji = '🐾'
 
+  const dayName = dayLabel(dateStr)
+  const circleDesc = circle ? CIRCLE_LABELS[circle] : 'no entry'
+
   return (
     <button
+      aria-label={`${dayName}: ${circleDesc}${urges > 0 ? `, ${urges} urge${urges > 1 ? 's' : ''}` : ''}${meds ? ', meds taken' : ''}`}
       style={{
         background: 'white',
         borderRadius: 14,
@@ -84,6 +90,8 @@ export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
       const data = {}
       results.forEach(([d, val]) => { data[d] = val })
       setWeekData(data)
+      setLoading(false)
+    }).catch(() => {
       setLoading(false)
     })
   }, [])

@@ -26,8 +26,8 @@ export const PATTERN_TRIPLE_RISK = {
   autoSurfaceSafetyPlan: true,
   detect: (weekData) => detectTripleRisk(weekData),
   message: () =>
-    "Something important: your meds were missed, and there were some hard nights this week. " +
-    "When those things happen together, your brain needs extra support. " +
+    "Something important. Your meds were missed and you had hard nights this week. " +
+    "When those happen together, your brain needs extra help. " +
     "Please reach out to someone on your safety plan today. 💙",
 }
 
@@ -632,8 +632,10 @@ export function runClinicalPatterns(weekData, profile) {
           message: pattern.message(weekData, profile),
         })
       }
-    } catch {
+    } catch (err) {
       // Never crash the UI due to a pattern detection error
+      // Log so clinically-important failures aren't invisible
+      console.warn(`[clinical-patterns] "${pattern.id}" failed:`, err)
     }
   }
 

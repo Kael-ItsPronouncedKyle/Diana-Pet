@@ -27,6 +27,8 @@ export default function BottomNav({ activeTab, onTabChange }) {
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
+            aria-label={tab.label}
+            aria-current={active ? 'page' : undefined}
             style={{
               flex: 1,
               padding: '10px 4px 8px',

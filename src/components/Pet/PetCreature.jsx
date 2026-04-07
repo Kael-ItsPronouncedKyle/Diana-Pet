@@ -86,7 +86,7 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
           animation: streak >= 7 ? 'flame-pulse 2s ease-in-out infinite' : 'none',
           boxShadow: streak >= 14 ? '0 0 8px rgba(255,215,0,0.4)' : 'none',
         }}>
-          🔥{streak}
+          <span aria-label={`${streak} day streak`}>🔥{streak}</span>
         </div>
       )}
     </div>

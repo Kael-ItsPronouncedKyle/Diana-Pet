@@ -266,7 +266,7 @@ export default function App() {
     const dt = Date.now() - touchStartRef.current.time
 
     // Must be fast enough and horizontal enough
-    if (Math.abs(dx) > 60 && Math.abs(dy) < 40 && dt < 400) {
+    if (Math.abs(dx) > 80 && Math.abs(dy) < 40 && dt < 400) {
       const idx = TAB_ORDER.indexOf(tab)
       if (dx < 0 && idx < TAB_ORDER.length - 1) {
         handleTabChange(TAB_ORDER[idx + 1])
@@ -396,6 +396,7 @@ export default function App() {
       {/* Settings button */}
       <button
         onClick={() => setShowSettings(true)}
+        aria-label="Open settings"
         style={{
           position: 'fixed', top: 16, left: 16, zIndex: 900,
           width: 44, height: 44, borderRadius: '50%',

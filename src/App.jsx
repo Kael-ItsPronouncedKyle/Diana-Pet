@@ -51,6 +51,17 @@ export default function App() {
       setAuthed(true)
       return
     }
+
+    // First check for existing session (handles OAuth redirect + refresh)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        storage.setUserId(session.user.id)
+        setAuthed(true)
+      }
+      setAuthReady(true)
+    })
+
+    // Then listen for future changes (sign-in, sign-out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {

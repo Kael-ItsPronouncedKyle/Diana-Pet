@@ -95,6 +95,7 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
 
   const signOut = async () => {
     if (!supabase) return
+    onClose()
     await supabase.auth.signOut()
   }
 

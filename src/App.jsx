@@ -97,7 +97,7 @@ export default function App() {
       async (event, session) => {
         if (session?.user) {
           storage.setUserId(session.user.id)
-          if (event === 'SIGNED_IN') {
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             await storage.sync()
           }
           setAuthed(true)
@@ -253,10 +253,6 @@ export default function App() {
     return null
   }
 
-  const goHome = useCallback(() => {
-    handleTabChange('home')
-  }, [handleTabChange])
-
   // Navigation handler
   const handleNavigate = useCallback((targetTab, targetSub) => {
     if (tab === 'home' && targetTab !== 'home') {
@@ -271,6 +267,10 @@ export default function App() {
     setSubView(null)
     setFromHome(false)
   }, [])
+
+  const goHome = useCallback(() => {
+    handleTabChange('home')
+  }, [handleTabChange])
 
   // Swipe gesture handling
   const handleTouchStart = useCallback((e) => {

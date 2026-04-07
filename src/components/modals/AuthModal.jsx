@@ -13,6 +13,7 @@ export default function AuthModal() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [signUpSuccess, setSignUpSuccess] = useState(false)
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -51,13 +52,17 @@ export default function AuthModal() {
     setLoading(true)
     setError(null)
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
       if (authError) {
         setError(authError.message || 'Sign up failed. Try a different email.')
+      } else if (data?.user && !data.session) {
+        // Email confirmation required — tell the user
+        setSignUpSuccess(true)
       }
+      // If data.session exists, onAuthStateChange handles the rest
     } catch (e) {
       setError('Something went wrong. Try again.')
     }
@@ -174,6 +179,17 @@ export default function AuthModal() {
           </p>
         )}
 
+        {signUpSuccess && (
+          <div style={{ marginTop: 16, padding: '16px', borderRadius: 14, background: '#E6F7EC', border: '2px solid #6BBF8A', textAlign: 'center' }}>
+            <p style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 4 }}>
+              Account created!
+            </p>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5 }}>
+              Check your email for a confirmation link. Then come back and sign in.
+            </p>
+          </div>
+        )}
+
         <div style={{ marginTop: 20, textAlign: 'center' }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight }}>
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}
@@ -182,6 +198,7 @@ export default function AuthModal() {
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError(null)
+                setSignUpSuccess(false)
                 setEmail('')
                 setPassword('')
                 setConfirmPassword('')

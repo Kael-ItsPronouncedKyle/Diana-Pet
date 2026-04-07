@@ -128,17 +128,25 @@ const storage = {
   },
 
   async get(key) {
+    let localCorrupted = false
+
     // Always try localStorage first for speed
     try {
       const raw = localStorage.getItem(key)
       if (raw !== null) {
         if (isSensitiveKey(key) && raw.startsWith(ENCRYPTED_PREFIX)) {
           // Encrypted data — decrypt then parse
-          const decrypted = await decryptString(raw)
-          return JSON.parse(decrypted)
+          try {
+            const decrypted = await decryptString(raw)
+            return JSON.parse(decrypted)
+          } catch {
+            // Decryption failed (key lost or data corrupt) — flag and try Supabase
+            localCorrupted = true
+          }
+        } else {
+          // Unencrypted data (legacy or non-sensitive) — parse directly
+          return JSON.parse(raw)
         }
-        // Unencrypted data (legacy or non-sensitive) — parse directly
-        return JSON.parse(raw)
       }
     } catch {
       // fall through to Supabase
@@ -152,18 +160,25 @@ const storage = {
         if (keyField) query = query.eq(keyField, keyValue)
         const { data, error } = await query.maybeSingle()
         if (!error && data) {
-          // Cache in localStorage (encrypted if sensitive)
-          if (isSensitiveKey(key)) {
-            const encrypted = await encryptString(JSON.stringify(data.data))
-            localStorage.setItem(key, encrypted)
-          } else {
-            localStorage.setItem(key, JSON.stringify(data.data))
-          }
+          // Re-cache in localStorage (re-encrypted with current key)
+          try {
+            if (isSensitiveKey(key)) {
+              const encrypted = await encryptString(JSON.stringify(data.data))
+              localStorage.setItem(key, encrypted)
+            } else {
+              localStorage.setItem(key, JSON.stringify(data.data))
+            }
+          } catch { /* cache write failed, data still returned */ }
           return data.data
         }
       } catch {
         // Supabase unavailable, localStorage-only mode
       }
+    }
+
+    // If local data was corrupted and Supabase couldn't help, clear the bad entry
+    if (localCorrupted) {
+      try { localStorage.removeItem(key) } catch { /* ignore */ }
     }
 
     return null

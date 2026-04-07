@@ -8,6 +8,7 @@ import { WORDS } from '../../constants/words.js'
 import { CREATURES, CREATURE_GREETINGS } from '../../constants/creatures.js'
 import { tapFeedback, saveFeedback, milestoneFeedback } from '../../utils/haptics.js'
 import storage from '../../utils/storage.js'
+import { assessNighttimeRisk, computeManiaScore, isNighttimeRiskWindow, getDaysSinceDischarge, POST_DISCHARGE_RISK } from '../../constants/clinicalConfig.js'
 
 // Warm, inviting card data per time of day
 const TIME_FLOWS = {
@@ -215,7 +216,7 @@ function FlowCard({ item, done, onTap, onQuickTap, justCompleted }) {
 }
 
 // ─── Main ──────────────────────────────────────────────────────────────────
-export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, onCreatureReaction, onMilestone }) {
+export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, onCreatureReaction, onMilestone, onOpenCrisis }) {
   const timeOfDay = getTimeOfDay()
   const flow = TIME_FLOWS[timeOfDay]
   const checkInCount = countCheckIns(daily)
@@ -224,6 +225,14 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
 
   const doneCount = ALL_SECTIONS.filter(k => isDone(k, daily)).length
   const allDone = doneCount === ALL_SECTIONS.length
+
+  // Clinical awareness
+  const maniaScore = computeManiaScore(daily)
+  const nighttimeRisk = isNighttimeRiskWindow() ? assessNighttimeRisk(daily, profile) : null
+  const daysOutOfHospital = getDaysSinceDischarge(profile)
+  const postDischargeNote = daysOutOfHospital !== null && daysOutOfHospital <= 30
+    ? POST_DISCHARGE_RISK.getDailyNote(daysOutOfHospital)
+    : null
 
   const [showMore, setShowMore] = useState(false)
   const [gridExpanded, setGridExpanded] = useState(false)
@@ -318,6 +327,68 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
           </div>
         </div>
       </div>
+
+      {/* Post-discharge note — gentle daily reminder during first 30 days */}
+      {postDischargeNote && (
+        <div style={{
+          background: '#E8F1FA', border: '2px solid #6BA8D6', borderRadius: 16,
+          padding: '12px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
+            {postDischargeNote}
+          </div>
+        </div>
+      )}
+
+      {/* Mania score banner — shown at 6+ */}
+      {maniaScore >= 8 && (
+        <div style={{
+          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
+          padding: '12px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
+            Your sleep has been short but your energy has been high. That pattern sometimes means your mood is shifting. Worth checking in with your team this week. 💛
+          </div>
+        </div>
+      )}
+      {maniaScore >= 6 && maniaScore < 8 && (
+        <div style={{
+          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
+          padding: '12px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
+            Short sleep + good energy can be a sign your mood is shifting a little. Keep an eye on it. 💛
+          </div>
+        </div>
+      )}
+
+      {/* Nighttime check-in card — shown 9pm-4am when risk conditions are met */}
+      {nighttimeRisk && (
+        <div style={{
+          background: '#E8F4F1', border: '2px solid #6BA89E', borderRadius: 16,
+          padding: '14px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>
+            {nighttimeRisk.message}
+          </div>
+          {nighttimeRisk.showSafetyPlan && onOpenCrisis && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={onOpenCrisis}
+                style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#6BA89E', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
+              >
+                Safety plan
+              </button>
+              <button
+                onClick={() => onOpenCrisis('coping-skills')}
+                style={{ flex: 1, padding: '10px', borderRadius: 12, border: '2px solid #6BA89E', background: '#E8F4F1', color: '#6BA89E', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
+              >
+                Coping plan
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* All done celebration */}
       {allDone && (

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { lastNDays, dayLabel } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 import TopNav from '../shared/TopNav.jsx'
+import { runClinicalPatterns } from '../../constants/clinicalPatterns.js'
 
 const C = {
   primary: '#6BA89E', text: '#3D3535', textLight: '#8A7F7F',
@@ -13,54 +14,8 @@ const card = { background: C.card, borderRadius: 20, padding: '16px 18px', boxSh
 const CIRCLE_COLORS = { outer: C.green, middle: C.yellow, inner: C.red }
 const ENERGY_EMOJIS = { 1: '😴', 2: '🥱', 3: '😐', 4: '😊', 5: '🌟' }
 
-function detectPatterns(weekData) {
-  const days = Object.values(weekData).filter(Boolean)
-  if (days.length < 3) return []
-  const patterns = []
-
-  // Crash after high activity
-  const entries = Object.entries(weekData).sort(([a], [b]) => a.localeCompare(b))
-  let crashAfterActivity = 0
-  for (let i = 1; i < entries.length; i++) {
-    const prev = entries[i-1][1]
-    const curr = entries[i][1]
-    if (prev?.activity?.attempted && prev?.activity?.tolerance !== 'Fine' && curr?.energy <= 2) {
-      crashAfterActivity++
-    }
-  }
-  if (crashAfterActivity >= 2) patterns.push("You've crashed a few times this week after active days. Your body might need more rest after you push hard.")
-
-  // Sleep-mood
-  const lowSleepHighCircle = days.filter(d => (d.sleep?.hours || 8) < 6 && (d.circles?.choice === 'middle' || d.circles?.choice === 'inner'))
-  if (lowSleepHighCircle.length >= 2) patterns.push("When you sleep less than 6 hours, your circles tend toward yellow or red. Sleep really does affect mood.")
-
-  // Pain-sleep
-  const painHighLowSleep = days.filter(d => d.pain >= 3 && (d.sleep?.hours || 8) < 6)
-  if (painHighLowSleep.length >= 2) patterns.push("Your pain has been higher on days you slept less. Rest helps your body hurt less.")
-
-  // DBT streak
-  const dbtDays = days.filter(d => d.dbt?.practiced).length
-  if (dbtDays >= 5) patterns.push(`You practiced DBT skills ${dbtDays} out of 7 days. That's a real habit forming. 💪`)
-  else if (dbtDays >= 3) patterns.push(`You practiced DBT skills ${dbtDays} days this week. Keep going — it adds up.`)
-
-  // Meds
-  const medsDays = days.filter(d => d.meds?.morning === true || d.meds?.evening === true).length
-  if (medsDays >= 6) patterns.push("You've been taking your meds consistently this week. That matters more than you know. 💊")
-
-  // Urge patterns
-  const eveningUrges = days.filter(d => (d.urges || []).some(u => new Date(u.timestamp).getHours() >= 17))
-  if (eveningUrges.length >= 3) patterns.push("Most of your urges happened in the evening. That's useful to know — you can plan ahead for those hours.")
-
-  // Green circle streak
-  const greenStreak = days.filter(d => d.circles?.choice === 'outer').length
-  if (greenStreak >= 5) patterns.push(`${greenStreak} green circle days this week! You are healing. 💚`)
-
-  // Sensory-crash
-  const sensoryCrash = days.filter(d => (d.sensory?.level || 0) >= 4)
-  if (sensoryCrash.length >= 2) patterns.push("Sensory overload days seem to connect to harder days after. Protecting your sensory load is protecting your energy.")
-
-  return patterns
-}
+// detectPatterns is now driven by clinicalPatterns.js
+// Returns clinical pattern results for rendering
 
 function DayCell({ dateStr, data }) {
   const circle = data?.circles?.choice
@@ -90,7 +45,14 @@ function DayCell({ dateStr, data }) {
   )
 }
 
-export default function WeekTab({ onGoHome }) {
+const TIER_STYLES = {
+  1: { background: C.redBg, border: `2px solid ${C.red}`, color: C.text, icon: '🚨' },
+  2: { background: C.yellowBg, border: `2px solid ${C.yellow}`, color: C.text, icon: '💛' },
+  3: { background: C.greenBg, border: `2px solid ${C.green}`, color: C.text, icon: '💚' },
+  4: { background: C.blueBg, border: `2px solid ${C.blue}`, color: C.text, icon: '💙' },
+}
+
+export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
   const [weekData, setWeekData] = useState({})
   const [loading, setLoading] = useState(true)
   const days = lastNDays(7)
@@ -104,7 +66,10 @@ export default function WeekTab({ onGoHome }) {
     })
   }, [])
 
-  const patterns = detectPatterns(weekData)
+  const patterns = runClinicalPatterns(weekData, profile)
+  const criticalPatterns = patterns.filter(p => p.tier === 1)
+  const hasCritical = criticalPatterns.length > 0
+  const anySafetySurfaced = criticalPatterns.some(p => p.autoSurfaceSafetyPlan)
 
   if (loading) return <div style={{ padding: 32, textAlign: 'center', color: C.textLight, fontWeight: 700 }}>Loading...</div>
 
@@ -114,6 +79,24 @@ export default function WeekTab({ onGoHome }) {
         <TopNav onGoHome={onGoHome} />
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px', animation: 'fade-up 0.25s ease-out' }}>
+
+      {/* Critical alert banner — shown at top when tier 1 patterns fire */}
+      {hasCritical && (
+        <div style={{ background: C.redBg, border: `2px solid ${C.red}`, borderRadius: 20, padding: '16px 18px', marginBottom: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>
+            Something important showed up this week. Take a look. 💙
+          </div>
+          {anySafetySurfaced && onOpenCrisis && (
+            <button
+              onClick={onOpenCrisis}
+              style={{ padding: '10px 18px', borderRadius: 12, border: 'none', background: C.red, color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+            >
+              Open my safety plan
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={card}>
         <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 14 }}>Last 7 Days</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
@@ -130,16 +113,31 @@ export default function WeekTab({ onGoHome }) {
         </div>
       </div>
 
-      {/* Patterns */}
+      {/* Patterns — sorted by tier, color-coded */}
       {patterns.length > 0 && (
         <div style={card}>
           <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 14 }}>Things I noticed 🔍</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {patterns.map((p, i) => (
-              <div key={i} style={{ background: '#F8F4F0', borderRadius: 14, padding: '12px 14px', fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.5 }}>
-                {p}
-              </div>
-            ))}
+            {patterns.map((p) => {
+              const style = TIER_STYLES[p.tier] || TIER_STYLES[4]
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    background: style.background,
+                    border: style.border,
+                    borderRadius: 14,
+                    padding: '12px 14px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: style.color,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {p.message}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

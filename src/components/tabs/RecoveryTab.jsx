@@ -6,6 +6,7 @@ import { today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 import TopNav from '../shared/TopNav.jsx'
+import { HARM_REDUCTION_MESSAGES, detectsCoreSchema, CORE_SCHEMA_RESPONSE } from '../../constants/clinicalConfig.js'
 
 // ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
 
@@ -331,6 +332,12 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
 
       {secrecyAnswer === false && (
         <div style={{ background: '#FDE8E4', borderRadius: 20, padding: '18px', border: '2px solid #E8907E', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
+          {/* Harm reduction message comes FIRST — before abstinence framing */}
+          {selected === 'inner' && (
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, marginBottom: 12 }}>
+              {HARM_REDUCTION_MESSAGES[Math.floor(Date.now() / 60000) % HARM_REDUCTION_MESSAGES.length]}
+            </div>
+          )}
           <div style={{ fontSize: 15, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, marginBottom: 12 }}>
             Secrets are where addiction lives. You don't have to tell Luis right now — but tell someone. Your safety plan has people who can help.
           </div>
@@ -692,16 +699,30 @@ function ChainAnalysis({ daily, onUpdate, fromHome, onGoHome }) {
 
   const existingChains = daily?.chains || []
 
+  const schemaDetected = detectsCoreSchema(thoughts) || detectsCoreSchema(promptingEvent)
+
   if (saved) {
     return (
       <div style={{ animation: 'fade-up 0.25s ease-out' }}>
         <BackToHomeBanner show={fromHome} onGoHome={onGoHome} />
-        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>💚</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#3D3535', lineHeight: 1.4 }}>
-            You just looked at what happened — honestly. That takes real courage.
+        {schemaDetected ? (
+          <div style={{ background: '#E8F4F1', borderRadius: 20, padding: '24px 20px', border: '2px solid #6BA89E', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>💙</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#3D3535', lineHeight: 1.5, marginBottom: 12 }}>
+              {CORE_SCHEMA_RESPONSE}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5 }}>
+              You still did the hard work of looking at what happened. That took real courage.
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>💚</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#3D3535', lineHeight: 1.4 }}>
+              You just looked at what happened — honestly. That takes real courage.
+            </div>
+          </div>
+        )}
       </div>
     )
   }

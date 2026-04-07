@@ -540,6 +540,45 @@ function WeeklySection({ profile }) {
         <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 12 }}>Bipolar has two sides. Let's check the other one too.</p>
         {renderQ(DEPRESSION_Q, dAnswers, setD, C.blue)}
       </div>
+      {/* PHQ-2 Sadness Screen */}
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>Sadness Check</div>
+        <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 14 }}>Two quick questions about how sad you felt this week.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {PHQ2_QUESTIONS.map((q, qi) => {
+            const qKey = qi === 0 ? 'q1' : 'q2'
+            return (
+              <div key={qi} style={{ background: 'white', borderRadius: 16, padding: '14px' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 10, lineHeight: 1.5 }}>{q}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {PHQ2_OPTIONS.map(opt => (
+                    <button
+                      key={opt.v}
+                      onClick={() => setPhq2(prev => ({ ...prev, [qKey]: opt.v }))}
+                      style={{
+                        padding: '10px 8px', borderRadius: 12,
+                        border: `2px solid ${phq2[qKey] === opt.v ? C.blue : '#F0E8E0'}`,
+                        background: phq2[qKey] === opt.v ? C.blue + '22' : 'white',
+                        color: phq2[qKey] === opt.v ? C.blue : C.text,
+                        fontSize: 13, fontWeight: 700, cursor: 'pointer', minHeight: 44,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        {phq2Complete && phq2Total >= 3 && (
+          <div style={{ marginTop: 14, background: C.yellowBg, borderRadius: 14, padding: '12px 14px', border: `2px solid ${C.yellow}` }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.5 }}>
+              💛 It sounds like things have been really hard. Talking to your therapist about this could help.
+            </p>
+          </div>
+        )}
+      </div>
       {profile?.schizoModule && (
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Brain Check-in</div>

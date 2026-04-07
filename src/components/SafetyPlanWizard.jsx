@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1',
@@ -180,8 +180,33 @@ function ContactBuilder({ contacts, onAdd, onRemove }) {
   )
 }
 
+const DRAFT_KEY = 'diana-safety-plan-draft'
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveDraft(plan, step) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ plan, step }))
+  } catch { /* ignore */ }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY)
+  } catch { /* ignore */ }
+}
+
 export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) {
   const existingPlan = profile?.safetyPlan || {}
+  const draft = loadDraft()
+  const hasDraft = draft && draft.plan && Object.values(draft.plan).some(v => Array.isArray(v) && v.length > 0)
+  const [showDraftPrompt, setShowDraftPrompt] = useState(hasDraft)
   const [step, setStep] = useState(0)
   const [plan, setPlan] = useState({
     warningSigns: existingPlan.warningSigns || [],
@@ -192,10 +217,27 @@ export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) 
     environmentSafe: existingPlan.environmentSafe || [],
   })
 
+  const restoreDraft = useCallback(() => {
+    if (draft) {
+      setPlan(draft.plan)
+      setStep(draft.step || 0)
+    }
+    setShowDraftPrompt(false)
+  }, []) // draft is read once at mount via loadDraft()
+
+  const dismissDraft = useCallback(() => {
+    clearDraft()
+    setShowDraftPrompt(false)
+  }, [])
+
   const currentStep = STEPS[step]
 
   const updateField = (key, value) => {
-    setPlan(prev => ({ ...prev, [key]: value }))
+    setPlan(prev => {
+      const next = { ...prev, [key]: value }
+      saveDraft(next, step)
+      return next
+    })
   }
 
   const addToList = (key, item) => {
@@ -210,10 +252,13 @@ export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) 
     // Save progress after each step
     onProfileUpdate({ safetyPlan: { ...plan } })
     if (step < STEPS.length - 1) {
-      setStep(step + 1)
+      const nextStep = step + 1
+      setStep(nextStep)
+      saveDraft(plan, nextStep)
     } else {
-      // Final step — save completed plan
+      // Final step — save completed plan and clear draft
       onProfileUpdate({ safetyPlan: { ...plan, completedAt: new Date().toISOString() } })
+      clearDraft()
       onClose()
     }
   }
@@ -222,6 +267,37 @@ export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) 
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      {/* Draft restore prompt */}
+      {showDraftPrompt && (
+        <div style={{ ...card, background: '#FFF8E1', border: '2px solid #F0C050', marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12, lineHeight: 1.5 }}>
+            Looks like you started this before. Want to pick up where you left off?
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={restoreDraft}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 14, border: 'none',
+                background: C.primary, color: 'white', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', minHeight: 44,
+              }}
+            >
+              Yes, continue
+            </button>
+            <button
+              onClick={dismissDraft}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 14, border: '2px solid #F0E8E0',
+                background: 'white', color: C.textLight, fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', minHeight: 44,
+              }}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Progress */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <button

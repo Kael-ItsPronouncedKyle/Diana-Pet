@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react'
 import { CREATURES } from '../../constants/creatures.js'
 
+const INTRO_LINES_COUNT = 4
+
 export default function OnboardingFlow({ onComplete }) {
   const [step, setStep] = useState(0)
   const [creature, setCreature] = useState(null)
   const [name, setName] = useState('')
   const [lineIndex, setLineIndex] = useState(0)
+
+  // Auto-advance intro lines on step 3 — must be at top level (Rules of Hooks)
+  useEffect(() => {
+    if (step !== 3) return
+    if (lineIndex >= INTRO_LINES_COUNT) return
+    const timer = setTimeout(() => {
+      setLineIndex(i => i + 1)
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [step, lineIndex])
 
   const next = () => setStep(s => s + 1)
 
@@ -268,16 +280,6 @@ export default function OnboardingFlow({ onComplete }) {
       `I won't judge you. I won't lie to you.`,
       `Ready?`,
     ]
-
-    // Auto-advance lines
-    useEffect(() => {
-      if (lineIndex < lines.length) {
-        const timer = setTimeout(() => {
-          setLineIndex(i => i + 1)
-        }, 1200)
-        return () => clearTimeout(timer)
-      }
-    }, [lineIndex, lines.length])
 
     return wrap(
       <>

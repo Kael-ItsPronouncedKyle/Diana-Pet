@@ -83,6 +83,7 @@ function ConnectionSection({ daily, onUpdate, fromHome, onGoHome }) {
             width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
             fontSize: 14, color: C.text, background: 'white', outline: 'none',
             fontFamily: 'inherit', marginBottom: 16, resize: 'vertical', minHeight: 80,
+            boxSizing: 'border-box',
           }}
         />
 

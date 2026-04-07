@@ -247,13 +247,12 @@ export function getFeedbackMessage(daily = {}, weekData = {}, profile = {}, time
     }
   }
 
-  // --- PRIORITY 8: TEACHING (word of day flag) ---
-  // We don't have word data here, so return a flag for the component to handle
+  // --- PRIORITY 8: TEACHING (word of day nudge) ---
   if (Math.random() < 0.3) {
     return {
+      message: "Have you checked today's word? Learning words is a superpower. 📖",
       priority: 8,
       type: 'teaching',
-      showWordOfDay: true,
     }
   }
 

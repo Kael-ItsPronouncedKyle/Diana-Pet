@@ -7,8 +7,6 @@ import storage from '../../utils/storage.js'
 import { getFeedbackMessage } from '../../utils/feedbackEngine.js'
 import { WORDS } from '../../constants/words.js'
 import { runClinicalPatterns } from '../../constants/clinicalPatterns.js'
-import ValuesAnchor from '../shared/ValuesAnchor.jsx'
-import DailySchedule from '../checkins/DailySchedule.jsx'
 
 // Warm, inviting card data per time of day
 const TIME_FLOWS = {
@@ -198,7 +196,8 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
 
   // Determine next action
   const nextAction = useMemo(() => {
-    return flow.items.find(item => !isDone(item.key, daily))
+    // Skip items with no tab (like word-of-day, which is rendered inline)
+    return flow.items.find(item => item.tab && !isDone(item.key, daily))
   }, [daily, timeOfDay, flow])
 
   const checkInCount_actual = countCheckIns(daily)
@@ -209,7 +208,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   const isNight = hour >= 21 || hour < 4
 
   const handleNextActionTap = () => {
-    if (nextAction) {
+    if (nextAction && nextAction.tab) {
       tapFeedback()
       onNavigate(nextAction.tab, nextAction.sub)
     }
@@ -858,7 +857,6 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
               { key: 'dissociation', label: 'Feel present?', emoji: '🌫', tab: 'checkins', sub: 'dissociation' },
               { key: 'bodySelf', label: 'Body-self check', emoji: '💜', tab: 'checkins', sub: 'bodySelf' },
               { key: 'puppies', label: 'Puppy training', emoji: '🐾', tab: 'puppies', sub: null },
-              { key: 'word', label: "Today's word", emoji: '📖', tab: 'checkins', sub: 'word' },
             ].map(item => (
               <CheckInRow
                 key={item.key}

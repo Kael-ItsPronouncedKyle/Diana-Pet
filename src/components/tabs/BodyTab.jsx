@@ -30,12 +30,20 @@ const SLEEP_QUALITY = [
 ]
 const WAKEUPS = ['No', 'Once', 'A few times', 'A lot']
 
+function parseHour(str) {
+  // Convert "10 PM" → 22, "12 AM" → 0, "12 PM" → 12, "7 AM" → 7
+  const num = parseInt(str) || 0
+  const isPM = str.toUpperCase().includes('PM')
+  const isAM = str.toUpperCase().includes('AM')
+  if (num === 12) return isPM ? 12 : 0
+  return isPM ? num + 12 : num
+}
+
 function calcHours(bedStr, wakeStr) {
-  const bedH = parseInt(bedStr) || 22
-  const wakeH = parseInt(wakeStr) || 7
-  const bed = bedH >= 18 ? bedH - 24 : bedH
-  let h = wakeH - bed
-  if (h < 0) h += 24
+  const bed = parseHour(bedStr)
+  const wake = parseHour(wakeStr)
+  let h = wake - bed
+  if (h <= 0) h += 24
   return Math.round(h * 10) / 10
 }
 
@@ -205,7 +213,7 @@ function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
         {showEvening && renderMed('Did you take your evening meds? 🌙', 'evening')}
         {profile?.medStreak > 1 && (
           <div style={{ textAlign: 'center', padding: '10px', background: C.greenBg, borderRadius: 14, fontSize: 14, fontWeight: 800, color: C.green }}>
-            💊 {profile.medStreak} days in a row!
+            💊 {profile?.medStreak} days in a row!
           </div>
         )}
       </div>

@@ -5,6 +5,8 @@ import KaelVoiceLibrary from '../shared/KaelVoiceLibrary.jsx'
 
 // Simplified: 6 categories including Letter from Me and Words from Kael
 const SECTIONS = ['quick-calm', 'safety-plan', 'coping-skills', 'letter', 'kael', 'contacts']
+const PRIMARY_SECTIONS = ['quick-calm', 'safety-plan', 'contacts']
+const SECONDARY_SECTIONS = ['coping-skills', 'letter', 'kael']
 const SECTION_LABELS = {
   'quick-calm': '🌱 Quick Calm',
   'safety-plan': '🛡️ My Safety Plan',
@@ -65,7 +67,11 @@ function SafetyPlanDisplay({ safetyPlan }) {
           You haven't set up your safety plan yet.
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', lineHeight: 1.5 }}>
-          Go to Settings to create one. It takes a few minutes and it's worth it.
+          A safety plan helps you know what to do when things get hard.
+          Ask someone you trust to help you set it up — it's worth it.
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', lineHeight: 1.5, marginTop: 8 }}>
+          You can find it in <strong style={{ color: 'var(--text, #3D3535)' }}>Settings → My Safety Plan</strong>.
         </p>
       </div>
     )
@@ -390,17 +396,36 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--text-light, #8A7F7F)', padding: '4px 8px' }}>✕</button>
         </div>
 
-        {/* Simplified 4-tab bar */}
-        <div style={{ display: 'flex', gap: 6, padding: '10px 12px', borderBottom: '1px solid #F0E8E0' }}>
-          {SECTIONS.map(s => (
+        {/* Primary tabs — large, easy to tap in crisis */}
+        <div style={{ display: 'flex', gap: 8, padding: '10px 12px 6px' }}>
+          {PRIMARY_SECTIONS.map(s => (
             <button
               key={s}
               onClick={() => setActiveSection(s)}
               style={{
-                flex: 1, padding: '10px 6px', borderRadius: 14, border: 'none', whiteSpace: 'nowrap',
+                flex: 1, padding: '14px 8px', borderRadius: 14, border: 'none',
                 background: activeSection === s ? '#6BA89E' : '#F0E8E0',
                 color: activeSection === s ? 'white' : 'var(--text, #3D3535)',
-                fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                fontSize: 14, fontWeight: 900, cursor: 'pointer',
+                textAlign: 'center', lineHeight: 1.3,
+                minHeight: 48,
+              }}
+            >
+              {SECTION_LABELS[s]}
+            </button>
+          ))}
+        </div>
+        {/* Secondary tabs — smaller row */}
+        <div style={{ display: 'flex', gap: 6, padding: '4px 12px 10px', borderBottom: '1px solid #F0E8E0' }}>
+          {SECONDARY_SECTIONS.map(s => (
+            <button
+              key={s}
+              onClick={() => setActiveSection(s)}
+              style={{
+                flex: 1, padding: '8px 6px', borderRadius: 12, border: 'none', whiteSpace: 'nowrap',
+                background: activeSection === s ? '#6BA89E' : 'transparent',
+                color: activeSection === s ? 'white' : 'var(--text-light, #8A7F7F)',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 textAlign: 'center', lineHeight: 1.3,
               }}
             >

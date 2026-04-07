@@ -7,39 +7,36 @@ import { runClinicalPatterns } from '../../constants/clinicalPatterns.js'
 const card = { background: 'var(--card)', borderRadius: 20, padding: '20px', boxShadow: '0 2px 8px rgba(61,53,53,0.06)', marginBottom: 16 }
 
 const CIRCLE_COLORS = { outer: 'var(--green)', middle: 'var(--yellow)', inner: 'var(--red)' }
-const ENERGY_EMOJIS = { 1: '😴', 2: '🥱', 3: '😐', 4: '😊', 5: '🌟' }
 
 const CIRCLE_LABELS = { outer: 'green circle', middle: 'yellow circle', inner: 'red circle' }
+const CIRCLE_SYMBOLS = { outer: '✓', middle: '~', inner: '!' }
 
 function DayCell({ dateStr, data }) {
   const circle = data?.circles?.choice
   const circleColor = circle ? CIRCLE_COLORS[circle] : '#E0D8D0'
-  const energy = data?.energy
-  const sleep = data?.sleep?.hours
+  const circleSymbol = circle ? CIRCLE_SYMBOLS[circle] : ''
   const meds = data?.meds?.morning === true || data?.meds?.evening === true
   const water = data?.water?.count || 0
   const urges = (data?.urges || []).length
   const dbt = !!data?.dbt?.practiced
-  const puppies = !!(data?.puppies?.apollo?.skills && Object.keys(data.puppies.apollo.skills).length > 0)
 
-  // Determine primary emoji for the day (most important thing)
-  let primaryEmoji = '○'
-  if (urges > 0) primaryEmoji = '🔴'
-  else if (energy) primaryEmoji = ENERGY_EMOJIS[energy]
-  else if (sleep) primaryEmoji = '🛏'
-  else if (dbt) primaryEmoji = '💚'
-  else if (puppies) primaryEmoji = '🐾'
+  // Build indicator list for everything that happened
+  const indicators = []
+  if (urges > 0) indicators.push('🔴')
+  if (meds) indicators.push('💊')
+  if (dbt) indicators.push('💚')
+  if (water > 0) indicators.push('💧')
 
   const dayName = dayLabel(dateStr)
   const circleDesc = circle ? CIRCLE_LABELS[circle] : 'no entry'
 
   return (
     <button
-      aria-label={`${dayName}: ${circleDesc}${urges > 0 ? `, ${urges} urge${urges > 1 ? 's' : ''}` : ''}${meds ? ', meds taken' : ''}`}
+      aria-label={`${dayName}: ${circleDesc}${urges > 0 ? `, ${urges} urge${urges > 1 ? 's' : ''}` : ''}${meds ? ', meds taken' : ''}${dbt ? ', DBT practiced' : ''}${water > 0 ? ', water tracked' : ''}`}
       style={{
         background: 'white',
         borderRadius: 14,
-        padding: '12px',
+        padding: '8px 4px',
         border: '1px solid #F0E8E0',
         boxShadow: '0 1px 4px rgba(61,53,53,0.04)',
         cursor: 'pointer',
@@ -47,21 +44,43 @@ function DayCell({ dateStr, data }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 8,
+        gap: 4,
         minHeight: 60
       }}
     >
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-light)' }}>{dayLabel(dateStr)}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <div style={{
-          width: 8,
-          height: 8,
+          width: 12,
+          height: 12,
           borderRadius: '50%',
           background: circleColor,
-          flexShrink: 0
-        }} title={circle || 'no entry'} />
-        <div style={{ fontSize: 16 }}>{primaryEmoji}</div>
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 8,
+          fontWeight: 900,
+          color: circle === 'middle' ? '#7A6A00' : 'white',
+          lineHeight: 1
+        }} title={circle || 'no entry'}>
+          {circleSymbol}
+        </div>
       </div>
+      {indicators.length > 0 && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: 1,
+          maxWidth: '100%',
+          lineHeight: 1
+        }}>
+          {indicators.map((ind, i) => (
+            <span key={i} style={{ fontSize: 10 }}>{ind}</span>
+          ))}
+        </div>
+      )}
     </button>
   )
 }
@@ -155,7 +174,13 @@ export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
           </div>
           {/* Legend */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16, paddingTop: 12, borderTop: '1px solid #F0E8E0' }}>
-            {[['⭕', 'Circle'], ['⚡', 'Energy'], ['🛏', 'Sleep'], ['💧', 'Water'], ['✅', 'Meds'], ['💚', 'DBT'], ['🐾', 'Dogs']].map(([e, l]) => (
+            {[
+              ['●', 'Circle (✓ outer, ~ middle, ! inner)'],
+              ['🔴', 'Urges'],
+              ['💊', 'Meds'],
+              ['💚', 'DBT'],
+              ['💧', 'Water']
+            ].map(([e, l]) => (
               <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 14 }}>{e}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-light)', fontWeight: 600 }}>{l}</span>

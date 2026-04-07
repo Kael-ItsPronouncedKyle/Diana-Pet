@@ -6,6 +6,7 @@ import { tapFeedback, saveFeedback, milestoneFeedback } from '../../utils/haptic
 import storage from '../../utils/storage.js'
 import { getFeedbackMessage } from '../../utils/feedbackEngine.js'
 import { WORDS } from '../../constants/words.js'
+import { runClinicalPatterns } from '../../constants/clinicalPatterns.js'
 import ValuesAnchor from '../shared/ValuesAnchor.jsx'
 import DailySchedule from '../checkins/DailySchedule.jsx'
 
@@ -137,14 +138,63 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   useEffect(() => {
     (async () => {
       try {
-        const result = await getFeedbackMessage(daily, weekData, profile, timeOfDay)
-        const msg = result?.message || result || '💬 Keep going. You matter.'
+        const result = await getFeedbackMessage(daily, weekData, profile || {}, timeOfDay)
+        const msg = (typeof result === 'string') ? result : (result?.message || '💬 Keep going. You matter.')
         setFeedbackMessage(typeof msg === 'string' ? msg : '💬 Keep going. You matter.')
       } catch (e) {
         setFeedbackMessage('💬 Keep going. You matter.')
       }
     })()
   }, [daily, weekData, profile, timeOfDay])
+
+  // ─── Safety Plan Banner (clinical pattern detection) ─────────────────
+  const [showSafetyBanner, setShowSafetyBanner] = useState(false)
+  const [safetyBannerDismissed, setSafetyBannerDismissed] = useState(!!daily?.safetyBannerDismissed)
+
+  useEffect(() => {
+    if (safetyBannerDismissed) return
+    try {
+      const patterns = runClinicalPatterns(weekData, profile || {})
+      const hasCritical = patterns.some(p => p.tier === 1 && p.autoSurfaceSafetyPlan)
+      setShowSafetyBanner(hasCritical)
+    } catch (e) {
+      // Never crash the UI
+    }
+  }, [weekData, profile, safetyBannerDismissed])
+
+  const handleDismissSafetyBanner = () => {
+    setSafetyBannerDismissed(true)
+    setShowSafetyBanner(false)
+    onNavigate('__updateDaily', { safetyBannerDismissed: true })
+  }
+
+  // ─── Engagement Dropout Banner ──────────────────────────────────────
+  const [showDropoutBanner, setShowDropoutBanner] = useState(false)
+
+  useEffect(() => {
+    if (daily?.dropoutBannerSeen) return
+    try {
+      // Check last 4 days (not including today)
+      const zeroDays = []
+      for (let i = 1; i <= 4; i++) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const dateStr = d.toISOString().slice(0, 10)
+        const dayData = weekData[dateStr]
+        if (!dayData || Object.keys(dayData).length === 0) {
+          zeroDays.push(dateStr)
+        }
+      }
+      setShowDropoutBanner(zeroDays.length >= 2)
+    } catch (e) {
+      // Never crash the UI
+    }
+  }, [weekData, daily?.dropoutBannerSeen])
+
+  const handleDismissDropoutBanner = () => {
+    setShowDropoutBanner(false)
+    onNavigate('__updateDaily', { dropoutBannerSeen: true })
+  }
 
   // Determine next action
   const nextAction = useMemo(() => {
@@ -359,7 +409,91 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
         />
       </div>
 
-      {/* 1b. Luis Context Banner (T2-07) */}
+      {/* 1b. Safety Plan Banner — pinned when critical pattern detected */}
+      {showSafetyBanner && !safetyBannerDismissed && (
+        <div style={{
+          marginBottom: 12,
+          padding: '14px 16px',
+          borderRadius: 16,
+          background: 'var(--accent-light, #FDE8E4)',
+          borderLeft: '4px solid var(--accent, #E8907E)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text, #3D3535)', lineHeight: 1.4 }}>
+              Your safety plan is here if you need it. 💙
+            </div>
+            <button
+              onClick={() => onOpenCrisis?.()}
+              style={{
+                marginTop: 8,
+                padding: '8px 16px',
+                borderRadius: 12,
+                background: 'var(--accent, #E8907E)',
+                color: 'white',
+                border: 'none',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Open safety plan
+            </button>
+          </div>
+          <button
+            onClick={handleDismissSafetyBanner}
+            aria-label="Dismiss"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 18,
+              color: 'var(--text-light, #8A7F7F)',
+              cursor: 'pointer',
+              padding: 4,
+              alignSelf: 'flex-start',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* 1c. Engagement Dropout Banner */}
+      {showDropoutBanner && !daily?.dropoutBannerSeen && (
+        <div style={{
+          marginBottom: 12,
+          padding: '14px 16px',
+          borderRadius: 16,
+          background: 'var(--blue-bg, #E8F1FA)',
+          border: '1.5px solid var(--blue, #6BA8D6)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text, #3D3535)', lineHeight: 1.5 }}>
+            You went quiet for a couple days. The days you don't check in are usually the days it helps the most. 💚
+          </div>
+          <button
+            onClick={handleDismissDropoutBanner}
+            aria-label="Dismiss"
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 18,
+              color: 'var(--text-light, #8A7F7F)',
+              cursor: 'pointer',
+              padding: 4,
+              alignSelf: 'flex-start',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* 1d. Luis Context Banner (T2-07) */}
       {profile?.luisShift && (
         <div style={{ marginBottom: 12 }}>
           {(() => {

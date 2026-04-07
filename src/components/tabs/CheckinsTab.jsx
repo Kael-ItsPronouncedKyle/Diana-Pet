@@ -34,7 +34,7 @@ const BODY_TILES = [
   { key: 'window', emoji: '🧠', label: 'Window', color: '#6BA89E', bg: '#E8F4F1', source: 'body' },
   { key: 'sensory', emoji: '🧠', label: 'Sensory', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
   { key: 'dissociation', emoji: '🌫', label: 'Present?', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
-  { key: 'bodySelf', emoji: '💜', label: 'Body-Self', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
+  { key: 'bodySelf', emoji: '💜', label: 'Body Check', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
   { key: 'weekly', emoji: '📋', label: 'Weekly', color: '#F0C050', bg: '#FFF8E1', source: 'body' },
 ]
 

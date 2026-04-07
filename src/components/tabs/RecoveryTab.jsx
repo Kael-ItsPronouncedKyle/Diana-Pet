@@ -621,7 +621,7 @@ function SkillCard({ skill, isExpanded, onToggle, onUse }) {
 // ─── Urge Logger + Skill Recommendations (T1-07) ─────────────────────────
 
 const CONTEXTS = ['Bored', 'Lonely', 'Stressed', 'Manic energy', 'Triggered by something I saw', "Can't sleep", 'Fighting with someone', "Don't know", 'Other']
-const RESPONSES = ['Used a skill', 'Called someone', 'Rode it out', 'Acted out', 'Still in it']
+const RESPONSES = ['Used a skill', 'Opened my toolkit', 'Called someone', 'Rode it out', 'Acted out', 'Still in it']
 
 function UrgeLogger({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
   const [logging, setLogging] = useState(false)

@@ -399,6 +399,18 @@ function SensorySection({ daily, onUpdate, fromHome, onGoHome }) {
   )
 }
 
+// ─── PHQ-2 Depression Screen ────────────────────────────────────────────────
+const PHQ2_QUESTIONS = [
+  'This week, did you feel really sad or like nothing would get better?',
+  'This week, did things you usually like feel boring or empty?',
+]
+const PHQ2_OPTIONS = [
+  { v: 0, label: 'Not really' },
+  { v: 1, label: 'A couple days' },
+  { v: 2, label: 'A lot of days' },
+  { v: 3, label: 'Almost every day' },
+]
+
 // ─── Weekly Screening ───────────────────────────────────────────────────────
 const MANIA_Q = [
   'Did you sleep a lot less than usual this week but feel okay or great?',
@@ -669,9 +681,10 @@ function DissociationSection({ daily, onUpdate, fromHome, onGoHome }) {
       )}
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 6 }}>Did you feel disconnected today?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 2 }}>Did you feel disconnected today?</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, marginBottom: 6, fontStyle: 'italic' }}>Dissociation — feeling far away from your body or watching yourself</div>
         <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.4 }}>
-          Dissociation means feeling "not here" — like you're watching from outside yourself, or time goes missing.
+          This means feeling "not here" — like you're watching from outside yourself, or time goes missing.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
           {DISSOCIATION_LEVELS.map(l => (
@@ -779,9 +792,10 @@ function BodySelfSection({ daily, onUpdate, fromHome, onGoHome, profile }) {
       )}
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 6 }}>How does your body feel today?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 2 }}>How does your body feel today?</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, marginBottom: 6, fontStyle: 'italic' }}>Dysphoria — how your body feels vs how you see yourself inside</div>
         <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.4 }}>
-          This is about your relationship with your body — not pain or energy, but how "at home" you feel in it.
+          Not pain or energy, but how "at home" you feel in your body.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
           {BODY_SELF_OPTIONS.map(o => (
@@ -936,8 +950,8 @@ const SUBS = [
   { key: 'water', label: '💧 Water' },
   { key: 'window', label: '🧠 Window' },
   { key: 'sensory', label: '🧠 Sensory' },
-  { key: 'dissociation', label: '🌫 Dissociation' },
-  { key: 'bodySelf', label: '💜 Body-Self' },
+  { key: 'dissociation', label: '🌫 Present?' },
+  { key: 'bodySelf', label: '💜 Body Check' },
   { key: 'weekly', label: '📋 Weekly' },
   { key: 'more', label: '+ More' },
 ]

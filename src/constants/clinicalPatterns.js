@@ -145,16 +145,54 @@ export const PATTERN_POST_DISCHARGE_CRITICAL = {
   },
 }
 
+export const PATTERN_COMPOUND_RISK = {
+  id: 'compound-risk',
+  tier: 1,
+  action: 'crisis',
+  autoSurfaceSafetyPlan: true,
+  detect: (weekData) => {
+    const days = Object.values(weekData).filter(Boolean)
+    return days.some(d => {
+      let riskFactors = 0
+      // Missed meds (morning or evening)
+      if (d.meds?.morning === false || d.meds?.evening === false) riskFactors++
+      // Poor sleep quality (rated 1-2 out of 5)
+      if (d.sleep?.quality != null && d.sleep.quality <= 2) riskFactors++
+      // Inner circle day
+      if (d.circles?.choice === 'inner') riskFactors++
+      // Secrecy (failed secrecy test)
+      if (d.secrecyTest === false) riskFactors++
+      // High dissociation (3+)
+      if ((d.dissociation || 0) >= 3) riskFactors++
+      // High urge intensity (any urge at 4+)
+      if ((d.urges || []).some(u => (u.intensity || 0) >= 4)) riskFactors++
+      return riskFactors >= 3
+    })
+  },
+  message: () =>
+    "Today had a lot going on at once. " +
+    "Missed meds, rough sleep, and hard choices together. " +
+    "Your safety plan can help right now. 💙",
+}
+
 // ─── Tier 2 — Concerning Patterns ────────────────────────────────────────────
 
 export const PATTERN_SUBSTITUTION = {
   id: 'substitution',
-  tier: 2,
+  // Tier is dynamic: tier 3 (affirming) if rising channel is healthy, tier 2 (concerning) otherwise
+  get tier() {
+    // Default to tier 2; actual tier is determined at detection time in message/detect
+    return 2
+  },
   action: 'flag',
   autoSurfaceSafetyPlan: false,
   detect: (weekData) => {
     const subs = detectSubstitution(weekData)
-    return subs !== null && subs.length > 0
+    if (!subs || subs.length === 0) return false
+    // Filter out subs where rising channel is healthy (those go to the affirming variant)
+    const HEALTHY_CHANNELS = ['dbtSkills', 'checkIns']
+    const concerningSubs = subs.filter(s => !HEALTHY_CHANNELS.includes(s.rising))
+    return concerningSubs.length > 0
   },
   message: (weekData) => {
     const subs = detectSubstitution(weekData)
@@ -167,13 +205,54 @@ export const PATTERN_SUBSTITUTION = {
       substances: 'substance use',
     }
 
-    const { dropping, rising } = subs[0]
+    const HEALTHY_CHANNELS = ['dbtSkills', 'checkIns']
+    const concerningSubs = subs.filter(s => !HEALTHY_CHANNELS.includes(s.rising))
+    if (concerningSubs.length === 0) return ''
+
+    const { dropping, rising } = concerningSubs[0]
     const droppingLabel = CHANNEL_LABELS[dropping] || dropping
     const risingLabel = CHANNEL_LABELS[rising] || rising
 
     return `${droppingLabel.charAt(0).toUpperCase() + droppingLabel.slice(1)} went down this week ` +
       `but ${risingLabel} came up. Those things can be connected. ` +
       "Not saying anything is wrong — just worth knowing. The channels are related."
+  },
+}
+
+export const PATTERN_SUBSTITUTION_HEALTHY = {
+  id: 'substitution-healthy',
+  tier: 3,
+  action: 'affirm',
+  autoSurfaceSafetyPlan: false,
+  detect: (weekData) => {
+    const subs = detectSubstitution(weekData)
+    if (!subs || subs.length === 0) return false
+    const HEALTHY_CHANNELS = ['dbtSkills', 'checkIns']
+    return subs.some(s => HEALTHY_CHANNELS.includes(s.rising))
+  },
+  message: (weekData) => {
+    const subs = detectSubstitution(weekData)
+    if (!subs || subs.length === 0) return ''
+
+    const CHANNEL_LABELS = {
+      sexual: 'urges',
+      selfHarm: 'self-harm',
+      spending: 'spending',
+      substances: 'substance use',
+      dbtSkills: 'DBT skills',
+      checkIns: 'check-ins',
+    }
+
+    const HEALTHY_CHANNELS = ['dbtSkills', 'checkIns']
+    const healthySub = subs.find(s => HEALTHY_CHANNELS.includes(s.rising))
+    if (!healthySub) return ''
+
+    const droppingLabel = CHANNEL_LABELS[healthySub.dropping] || healthySub.dropping
+    const risingLabel = CHANNEL_LABELS[healthySub.rising] || healthySub.rising
+
+    return `${droppingLabel.charAt(0).toUpperCase() + droppingLabel.slice(1)} went down this week ` +
+      `and ${risingLabel} went up. That's real progress. ` +
+      "You're replacing hard patterns with healthy ones. 💚"
   },
 }
 
@@ -299,6 +378,40 @@ export const PATTERN_SECRECY_MODERATE = {
   message: () =>
     "You had 2 secret days this week. That pattern matters. " +
     "Reaching out to someone — even just to say you're struggling — can help.",
+}
+
+export const PATTERN_URGE_INTENSITY_RISING = {
+  id: 'urge-intensity-rising',
+  tier: 2,
+  action: 'flag',
+  autoSurfaceSafetyPlan: false,
+  detect: (weekData) => {
+    const entries = Object.entries(weekData).sort(([a], [b]) => a.localeCompare(b))
+    const daysWithUrges = entries.filter(([, d]) => d?.urges && d.urges.length > 0)
+    if (daysWithUrges.length < 4) return false
+
+    const half = Math.floor(daysWithUrges.length / 2)
+    const firstHalf = daysWithUrges.slice(0, half)
+    const secondHalf = daysWithUrges.slice(half)
+
+    const avgIntensity = (days) => {
+      let total = 0, count = 0
+      for (const [, d] of days) {
+        for (const u of d.urges) {
+          if (u.intensity != null) { total += u.intensity; count++ }
+        }
+      }
+      return count > 0 ? total / count : 0
+    }
+
+    const avgFirst = avgIntensity(firstHalf)
+    const avgSecond = avgIntensity(secondHalf)
+    return avgFirst > 0 && avgSecond > avgFirst + 0.5
+  },
+  message: () =>
+    "Your urges are getting stronger this week. " +
+    "That's not failure — that's your brain asking for more help. " +
+    "Your coping plan and safety plan are here for you. 💛",
 }
 
 // ─── Tier 3 — Affirming Patterns ─────────────────────────────────────────────
@@ -446,6 +559,39 @@ export const PATTERN_SKILLS_EFFECTIVE = {
   message: () =>
     "You used DBT skills when you felt urges this week. " +
     "That's the whole point of the skills — and you did it. 💚",
+}
+
+export const PATTERN_URGE_INTENSITY_FALLING = {
+  id: 'urge-intensity-falling',
+  tier: 3,
+  action: 'affirm',
+  autoSurfaceSafetyPlan: false,
+  detect: (weekData) => {
+    const entries = Object.entries(weekData).sort(([a], [b]) => a.localeCompare(b))
+    const daysWithUrges = entries.filter(([, d]) => d?.urges && d.urges.length > 0)
+    if (daysWithUrges.length < 4) return false
+
+    const half = Math.floor(daysWithUrges.length / 2)
+    const firstHalf = daysWithUrges.slice(0, half)
+    const secondHalf = daysWithUrges.slice(half)
+
+    const avgIntensity = (days) => {
+      let total = 0, count = 0
+      for (const [, d] of days) {
+        for (const u of d.urges) {
+          if (u.intensity != null) { total += u.intensity; count++ }
+        }
+      }
+      return count > 0 ? total / count : 0
+    }
+
+    const avgFirst = avgIntensity(firstHalf)
+    const avgSecond = avgIntensity(secondHalf)
+    return avgFirst > 0 && avgSecond < avgFirst - 0.5
+  },
+  message: () =>
+    "Your urges are getting weaker. The skills are working. " +
+    "Keep going — you're doing this. 💚",
 }
 
 // ─── Tier 4 — Clinical Insight Patterns ──────────────────────────────────────

@@ -172,18 +172,60 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
     }
   }
 
+  const [undoAction, setUndoAction] = useState(null)
+
   const handleQuickAction = (item) => {
     if (item.quickAction === 'water') {
-      const count = (daily?.water?.count || 0) + 1
+      const prevCount = daily?.water?.count || 0
+      const count = prevCount + 1
       onNavigate('__updateDaily', { water: { count: Math.min(8, count) } })
       onToast?.(`💧 ${Math.min(8, count)}/8 glasses`)
+      setUndoAction({ type: 'water', prev: prevCount })
+      setTimeout(() => setUndoAction(null), 5000)
     } else if (item.quickAction === 'meds') {
       const hour = new Date().getHours()
       const field = hour < 17 ? 'morning' : 'evening'
-      onNavigate('__updateDaily', { meds: { ...(daily?.meds || {}), [field]: true } })
+      const prevMeds = { ...(daily?.meds || {}) }
+      onNavigate('__updateDaily', { meds: { ...prevMeds, [field]: true } })
       onToast?.('💊 Meds logged!')
+      setUndoAction({ type: 'meds', field, prev: prevMeds })
+      setTimeout(() => setUndoAction(null), 5000)
     }
   }
+
+  const handleUndo = () => {
+    if (!undoAction) return
+    if (undoAction.type === 'water') {
+      onNavigate('__updateDaily', { water: { count: undoAction.prev } })
+      onToast?.('💧 Undone')
+    } else if (undoAction.type === 'meds') {
+      onNavigate('__updateDaily', { meds: undoAction.prev })
+      onToast?.('💊 Undone')
+    }
+    setUndoAction(null)
+  }
+
+  // ─── Yesterday's urge reflection check ──────────────────────────────
+  const [yesterdayHadUrge, setYesterdayHadUrge] = useState(false)
+  const [yesterdayReflected, setYesterdayReflected] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      if (timeOfDay !== 'morning') return
+      try {
+        const yest = new Date()
+        yest.setDate(yest.getDate() - 1)
+        const yKey = `diana-daily:${yest.toISOString().slice(0, 10)}`
+        const yData = await storage.get(yKey)
+        if (yData?.urges?.length > 0) {
+          setYesterdayHadUrge(true)
+          setYesterdayReflected(!!yData.urgeReflection)
+        }
+      } catch (e) {
+        // silently skip
+      }
+    })()
+  }, [timeOfDay])
 
   // ─── Word of Day State and Logic ─────────────────────────────────────
   const [todayWord, setTodayWord] = useState(null)
@@ -480,6 +522,52 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
             {checkInCount_actual} of {TOTAL_CHECKINS}
           </span>
         </div>
+      )}
+
+      {/* Undo quick-action banner */}
+      {undoAction && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 16px', borderRadius: 14,
+          background: 'var(--yellow-bg, #FFF8E1)', border: '1.5px solid var(--yellow, #F0C050)',
+          marginBottom: 12, animation: 'fade-up 0.2s ease-out',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text, #3D3535)' }}>
+            {undoAction.type === 'water' ? '💧 Water logged' : '💊 Meds logged'}
+          </span>
+          <button onClick={handleUndo} style={{
+            padding: '6px 14px', borderRadius: 10, border: 'none',
+            background: 'var(--yellow, #F0C050)', color: 'white',
+            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>
+            Undo
+          </button>
+        </div>
+      )}
+
+      {/* Morning urge reflection prompt */}
+      {timeOfDay === 'morning' && yesterdayHadUrge && !yesterdayReflected && (
+        <button
+          onClick={() => onNavigate('checkins', 'urges')}
+          style={{
+            width: '100%', padding: '14px 18px', borderRadius: 16,
+            background: 'var(--accent-light, #FDE8E4)', border: '2px solid var(--accent, #E8907E)',
+            cursor: 'pointer', textAlign: 'left', marginBottom: 12,
+            display: 'flex', alignItems: 'center', gap: 12,
+            animation: 'fade-up 0.2s ease-out',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>🔴</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text, #3D3535)' }}>
+              Yesterday had some urges.
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-light, #8A7F7F)' }}>
+              Want to reflect on how you handled it?
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: 'var(--text-light, #8A7F7F)', marginLeft: 'auto' }}>→</div>
+        </button>
       )}
 
       {/* 5. Values Anchor Display (T1-12) */}

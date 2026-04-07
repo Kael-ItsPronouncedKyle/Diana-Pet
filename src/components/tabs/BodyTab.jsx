@@ -65,13 +65,33 @@ function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
       )}
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>What time did you go to bed?</div>
-        <select value={bedtime} onChange={e => setBedtime(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700, background: 'white', color: C.text, outline: 'none', marginBottom: 16 }}>
-          {BEDTIMES.map(t => <option key={t}>{t}</option>)}
-        </select>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          {BEDTIMES.map(t => (
+            <button key={t} onClick={() => setBedtime(t)} style={{
+              padding: '10px 12px', borderRadius: 12,
+              border: `2px solid ${bedtime === t ? C.primary : '#F0E8E0'}`,
+              background: bedtime === t ? C.primaryLight : 'white',
+              color: bedtime === t ? C.primary : C.text,
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44,
+            }}>
+              {t}
+            </button>
+          ))}
+        </div>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>What time did you wake up?</div>
-        <select value={waketime} onChange={e => setWaketime(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700, background: 'white', color: C.text, outline: 'none', marginBottom: 12 }}>
-          {WAKETIMES.map(t => <option key={t}>{t}</option>)}
-        </select>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          {WAKETIMES.map(t => (
+            <button key={t} onClick={() => setWaketime(t)} style={{
+              padding: '10px 12px', borderRadius: 12,
+              border: `2px solid ${waketime === t ? C.primary : '#F0E8E0'}`,
+              background: waketime === t ? C.primaryLight : 'white',
+              color: waketime === t ? C.primary : C.text,
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44,
+            }}>
+              {t}
+            </button>
+          ))}
+        </div>
         <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 900, color: C.primary, marginBottom: 16 }}>
           {hours} hours slept
         </div>
@@ -389,6 +409,14 @@ const MANIA_Q = [
   'Have you been starting lots of new projects or plans?',
   'Is your sex drive way higher than your normal?',
 ]
+const DEPRESSION_Q = [
+  'Have you felt down, sad, or hopeless most of the day, most days this week?',
+  'Have you lost interest in things you usually enjoy?',
+  'Have you felt like you have no energy — even after resting?',
+  'Have you had trouble thinking clearly or making choices?',
+  'Have you felt like you\'re a burden or that things won\'t get better?',
+]
+
 const SCHIZO_Q = [
   'Have you been hearing things other people don\'t hear?',
   'Have you seen things that might not be there?',
@@ -403,6 +431,7 @@ function WeeklySection({ profile }) {
   const key = `diana-weekly:${wk}`
   const [existing, setExisting] = useState(null)
   const [mAnswers, setMAnswers] = useState({})
+  const [dAnswers, setDAnswers] = useState({})
   const [sAnswers, setSAnswers] = useState({})
   const [submitted, setSubmitted] = useState(false)
   const [result, setResult] = useState(null)
@@ -412,12 +441,14 @@ function WeeklySection({ profile }) {
   }, [key])
 
   const setM = (i, v) => setMAnswers(prev => ({ ...prev, [i]: v }))
+  const setD = (i, v) => setDAnswers(prev => ({ ...prev, [i]: v }))
   const setS = (i, v) => setSAnswers(prev => ({ ...prev, [i]: v }))
 
   const submit = async () => {
     const yesCount = Object.values(mAnswers).filter(v => v === 'yes').length
+    const dYesCount = Object.values(dAnswers).filter(v => v === 'yes').length
     const sYesCount = Object.values(sAnswers).filter(v => v === 'yes').length
-    const r = { mania: mAnswers, schizo: sAnswers, yesCount, sYesCount, date: today() }
+    const r = { mania: mAnswers, depression: dAnswers, schizo: sAnswers, yesCount, dYesCount, sYesCount, date: today() }
     await storage.set(key, r)
     setResult(r)
     setSubmitted(true)
@@ -448,6 +479,16 @@ function WeeklySection({ profile }) {
             : 'Everything looks steady this week. Nice. 💚'}
         </p>
       </div>
+      {result.dYesCount >= 3 && (
+        <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>💙</div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>
+            {result.dYesCount >= 4
+              ? "Several of these are signs your mood may be dropping. You deserve support right now. Please reach out to your team this week."
+              : "Some low-mood signs this week. That's worth noticing. Be gentle with yourself, and tell someone if it gets heavier."}
+          </p>
+        </div>
+      )}
       {profile?.schizoModule && result.sYesCount >= 2 && (
         <div style={{ ...card, background: C.yellowBg, border: `2px solid ${C.yellow}` }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>💛 Some of these experiences can happen when your brain is under extra stress. Let your doctor or therapist know what you're noticing.</p>
@@ -466,6 +507,11 @@ function WeeklySection({ profile }) {
         <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Mood Check</div>
         {renderQ(MANIA_Q, mAnswers, setM, C.yellow)}
       </div>
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Low Mood Check</div>
+        <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 12 }}>Bipolar has two sides. Let's check the other one too.</p>
+        {renderQ(DEPRESSION_Q, dAnswers, setD, C.blue)}
+      </div>
       {profile?.schizoModule && (
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Brain Check-in</div>
@@ -475,8 +521,8 @@ function WeeklySection({ profile }) {
       )}
       <button
         onClick={submit}
-        disabled={Object.keys(mAnswers).length < MANIA_Q.length}
-        style={{ width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: Object.keys(mAnswers).length >= MANIA_Q.length ? C.primary : '#E0E0E0', color: 'white', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 20 }}
+        disabled={Object.keys(mAnswers).length < MANIA_Q.length || Object.keys(dAnswers).length < DEPRESSION_Q.length}
+        style={{ width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: (Object.keys(mAnswers).length >= MANIA_Q.length && Object.keys(dAnswers).length >= DEPRESSION_Q.length) ? C.primary : '#E0E0E0', color: 'white', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 20 }}
       >
         Submit weekly check-in →
       </button>
@@ -681,7 +727,7 @@ const BODY_SELF_OPTIONS = [
   { v: 'dysphoric', emoji: '💔', label: 'Dysphoric', sub: 'Really struggling with my body today.' },
 ]
 
-function BodySelfSection({ daily, onUpdate, fromHome, onGoHome }) {
+function BodySelfSection({ daily, onUpdate, fromHome, onGoHome, profile }) {
   const [selected, setSelected] = useState(daily?.bodySelf || null)
   const [saved, setSaved] = useState(!!daily?.bodySelf)
 
@@ -702,6 +748,25 @@ function BodySelfSection({ daily, onUpdate, fromHome, onGoHome }) {
           <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginTop: 8, marginBottom: 0 }}>
             If you have a coping plan, check it now. You wrote it for moments like this.
           </p>
+        </div>
+      )}
+
+      {/* Values anchor — surfaces after dysphoria to reconnect with goals */}
+      {saved && selected === 'dysphoric' && profile?.valuesAnchor?.letter && (
+        <div style={{ ...card, background: '#E8F4F1', border: `2px solid ${C.primary}` }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: C.primary, marginBottom: 8, letterSpacing: 0.5 }}>💌 YOU WROTE THIS FOR MOMENTS LIKE NOW:</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.6, fontStyle: 'italic' }}>
+            "{profile.valuesAnchor.letter.length > 200 ? profile.valuesAnchor.letter.slice(0, 200) + '...' : profile.valuesAnchor.letter}"
+          </div>
+          {profile.valuesAnchor.goals?.filter(Boolean).length > 0 && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {profile.valuesAnchor.goals.filter(Boolean).map((goal, i) => (
+                <div key={i} style={{ fontSize: 13, fontWeight: 700, color: C.primary, display: 'flex', gap: 6 }}>
+                  <span>✓</span> <span>{goal}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -903,7 +968,7 @@ export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome
         {sub === 'window' && <WindowSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'sensory' && <SensorySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'dissociation' && <DissociationSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} profile={profile} />}
         {sub === 'weekly' && <WeeklySection profile={profile} />}
         {sub === 'more' && <ClinicalCheckIns daily={daily} onUpdate={onUpdate} />}
       </div>

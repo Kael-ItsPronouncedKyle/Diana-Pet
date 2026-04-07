@@ -15,13 +15,17 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
   const [expandedQuadrant, setExpandedQuadrant] = useState(null)
   const [selected, setSelected] = useState(daily?.emotions || [])
   const [emotionContext, setEmotionContext] = useState(daily?.emotionContext || '')
+  const [bodyLocation, setBodyLocation] = useState(daily?.emotionBody || '')
   const [saved, setSaved] = useState(!!(daily?.emotions?.length))
   const [showContext, setShowContext] = useState(false)
+  const [showBodyPrompt, setShowBodyPrompt] = useState(false)
+
+  const MAX_EMOTIONS = 5
 
   const toggleEmotion = (id) => {
     setSelected(prev => {
       if (prev.includes(id)) return prev.filter(e => e !== id)
-      if (prev.length >= 3) return prev // max 3
+      if (prev.length >= MAX_EMOTIONS) return prev
       return [...prev, id]
     })
   }
@@ -29,8 +33,39 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
   const allEmotions = EMOTION_QUADRANTS.flatMap(q => q.emotions)
 
   const save = () => {
-    onUpdate({ emotions: selected, emotionContext: emotionContext.trim() })
+    onUpdate({ emotions: selected, emotionContext: emotionContext.trim(), emotionBody: bodyLocation.trim() })
     setSaved(true)
+  }
+
+  // "I don't know" shortcut — saves immediately with special marker
+  const handleDontKnow = () => {
+    onUpdate({ emotions: ['unsure'], emotionContext: '' })
+    setSaved(true)
+    setSelected(['unsure'])
+  }
+
+  // Saved state — "I don't know" variant
+  if (saved && selected.length === 1 && selected[0] === 'unsure') {
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <BackToHomeBanner show={fromHome} onGoHome={onGoHome} />
+        <div style={{ background: '#E8F1FA', borderRadius: 20, padding: '20px', border: '2px solid #6BA8D6', textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>💙</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>
+            That's okay. Not knowing is honest.
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5 }}>
+            Sometimes feelings are hard to name. You can come back to this later if something clicks.
+          </div>
+        </div>
+        <button
+          onClick={() => { setSaved(false); setSelected([]) }}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Try again
+        </button>
+      </div>
+    )
   }
 
   if (saved && selected.length > 0) {
@@ -68,6 +103,13 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
               </div>
             )
           })}
+          {/* Body location display */}
+          {bodyLocation && (
+            <div style={{ textAlign: 'left', background: '#F8F4F0', borderRadius: 14, padding: '10px 14px', marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8A7F7F', marginBottom: 4 }}>WHERE YOU FEEL IT:</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#3D3535' }}>{bodyLocation}</div>
+            </div>
+          )}
           {/* Emotion count tracker */}
           <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: '#6BA89E' }}>
             You've named {selected.length} feeling{selected.length !== 1 ? 's' : ''} today. Your emotional vocabulary is growing.
@@ -79,6 +121,43 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
         >
           Change my answer
         </button>
+      </div>
+    )
+  }
+
+  // Somatic awareness prompt (step 2b — after context, before save)
+  if (showBodyPrompt) {
+    const BODY_SPOTS = ['Head', 'Chest', 'Stomach', 'Throat', 'Shoulders', 'Hands', 'All over', 'Nowhere specific']
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <div style={{ background: 'white', borderRadius: 20, padding: '18px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 6 }}>Where do you feel it in your body?</div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12 }}>Tap one, or skip. There's no wrong answer.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {BODY_SPOTS.map(spot => (
+              <button
+                key={spot}
+                onClick={() => setBodyLocation(spot)}
+                style={{
+                  padding: '10px 16px', borderRadius: 20,
+                  background: bodyLocation === spot ? '#6BA89E' : '#F0E8E0',
+                  color: bodyLocation === spot ? 'white' : '#3D3535',
+                  border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44,
+                }}
+              >
+                {spot}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={save} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+            Save
+          </button>
+          <button onClick={() => { setBodyLocation(''); save() }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            Skip
+          </button>
+        </div>
       </div>
     )
   }
@@ -102,10 +181,10 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
           />
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={save} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
-            Save
+          <button onClick={() => setShowBodyPrompt(true)} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+            Next
           </button>
-          <button onClick={() => { setEmotionContext(''); save() }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => { setEmotionContext(''); setShowBodyPrompt(true) }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             Skip
           </button>
         </div>
@@ -116,8 +195,26 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
       <p style={{ fontSize: 15, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.5 }}>
-        What are you feeling right now? Pick up to 3.
+        What are you feeling right now? Pick up to {MAX_EMOTIONS}.
       </p>
+
+      {/* "I don't know" option — alexithymia support */}
+      <button
+        onClick={handleDontKnow}
+        style={{
+          width: '100%', padding: '16px 18px', borderRadius: 16,
+          background: 'white', border: '2px solid #E8F1FA',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+          marginBottom: 16, textAlign: 'left',
+          boxShadow: '0 2px 12px rgba(61,53,53,0.06)',
+        }}
+      >
+        <span style={{ fontSize: 24 }}>🤷</span>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535' }}>I don't know</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#8A7F7F' }}>That's a real answer too.</div>
+        </div>
+      </button>
 
       {/* Quadrant grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
@@ -150,7 +247,7 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {q.emotions.map(em => {
                 const isSelected = selected.includes(em.id)
-                const canSelect = isSelected || selected.length < 3
+                const canSelect = isSelected || selected.length < MAX_EMOTIONS
                 return (
                   <button
                     key={em.id}
@@ -219,7 +316,7 @@ const AFFIRM = {
   outer: "Green circle day! You're healing. 💚",
 }
 
-function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
+function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome, onNavigateToChain }) {
   const [journalText, setJournalText] = useState(daily?.circles?.journal || '')
   const [showJournal, setShowJournal] = useState(!!daily?.circles?.choice)
   const [secrecyAnswer, setSecrecyAnswer] = useState(daily?.secrecyTest ?? null)
@@ -365,6 +462,24 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
             style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#E8907E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
           >
             Open my safety plan
+          </button>
+        </div>
+      )}
+
+      {/* Chain analysis prompt — after inner circle + secrecy test complete */}
+      {selected === 'inner' && circlesDone && !daily?.chainAnalysis && onNavigateToChain && (
+        <div style={{ background: '#E8F1FA', borderRadius: 20, padding: '18px', border: '2px solid #6BA8D6', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>
+            Want to walk through what happened?
+          </div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5, marginBottom: 12 }}>
+            A chain analysis helps you see the steps that led here. No judgment — just understanding.
+          </p>
+          <button
+            onClick={onNavigateToChain}
+            style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#6BA8D6', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Walk through it 🔗
           </button>
         </div>
       )}
@@ -1143,7 +1258,7 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub,
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {/* 24-hour urge reflection — shows at top of urges tab */}
         {sub === 'urges' && <UrgeReflection daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
-        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} onNavigateToChain={() => setSub('chain')} />}
         {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}

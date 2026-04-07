@@ -556,6 +556,27 @@ export const PATTERN_PUPPIES_CONSISTENT = {
     "Structure and routine — for them and for you. 🐾",
 }
 
+export const PATTERN_DYSPHORIA_URGE_CORRELATION = {
+  id: 'dysphoria-urge-correlation',
+  tier: 4,
+  action: 'insight',
+  autoSurfaceSafetyPlan: false,
+  detect: (weekData) => {
+    const days = Object.values(weekData).filter(Boolean)
+    // Count days where both dysphoria AND (urge or inner circle) occurred
+    const bothDays = days.filter(d =>
+      d.bodySelf === 'dysphoric' &&
+      ((d.urges && d.urges.length > 0) || d.circles?.choice === 'inner')
+    ).length
+    return bothDays >= 2
+  },
+  message: () =>
+    "Dysphoria days and acting-out days are lining up. " +
+    "When your body feels wrong, the urge to escape gets louder. " +
+    "That's not weakness — it's a pattern you can plan for. " +
+    "Check your coping plan for 'when I feel disconnected from my body.'",
+}
+
 // ─── All Patterns (ordered by tier — critical first) ─────────────────────────
 
 export const CLINICAL_PATTERNS = [
@@ -590,6 +611,7 @@ export const CLINICAL_PATTERNS = [
   PATTERN_EVENING_URGES,
   PATTERN_PAIN_SLEEP,
   PATTERN_PUPPIES_CONSISTENT,
+  PATTERN_DYSPHORIA_URGE_CORRELATION,
 ]
 
 // Run all clinical pattern detectors against the week's data.

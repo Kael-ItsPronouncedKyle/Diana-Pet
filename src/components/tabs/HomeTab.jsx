@@ -1,59 +1,50 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
-import Pet from '../Pet/Pet.jsx'
-import ProgressRing from '../shared/ProgressRing.jsx'
-import CheckInSheet from '../shared/CheckInSheet.jsx'
-import { getTimeOfDay } from '../../utils/dates.js'
-import { countCheckIns, TOTAL_CHECKINS, checkMilestone, CREATURE_REACTIONS } from '../../utils/checkIns.js'
-import { WORDS } from '../../constants/words.js'
-import { CREATURES, CREATURE_GREETINGS } from '../../constants/creatures.js'
+import CreatureScene from '../Pet/CreatureScene.jsx'
+import { getTimeOfDay, today } from '../../utils/dates.js'
+import { countCheckIns, TOTAL_CHECKINS, checkMilestone, CREATURE_REACTIONS, getMoodState } from '../../utils/checkIns.js'
 import { tapFeedback, saveFeedback, milestoneFeedback } from '../../utils/haptics.js'
 import storage from '../../utils/storage.js'
-import { assessNighttimeRisk, computeManiaScore, isNighttimeRiskWindow, getDaysSinceDischarge, POST_DISCHARGE_RISK } from '../../constants/clinicalConfig.js'
+import { getFeedbackMessage } from '../../utils/feedbackEngine.js'
+import { WORDS } from '../../constants/words.js'
+import ValuesAnchor from '../shared/ValuesAnchor.jsx'
+import DailySchedule from '../checkins/DailySchedule.jsx'
 
 // Warm, inviting card data per time of day
 const TIME_FLOWS = {
   morning: {
     subtext: "When you're ready:",
     items: [
-      { key: 'sleep', label: 'How did you sleep?', emoji: '😴', tab: 'body', sub: 'sleep', color: '#6BA8D6' },
-      { key: 'meds', label: 'Morning meds?', emoji: '💊', tab: 'body', sub: 'meds', color: '#6BA89E', quickAction: 'meds' },
-      { key: 'energy', label: "How's your energy?", emoji: '⚡', tab: 'body', sub: 'energy', color: '#E8907E' },
-      { key: 'window', label: 'Where is your body at?', emoji: '🧠', tab: 'body', sub: 'window', color: '#6BA89E' },
-      { key: 'feelings', label: 'What are you feeling?', emoji: '🎭', tab: 'recovery', sub: 'feelings', color: '#E8907E' },
+      { key: 'sleep', label: 'How did you sleep?', emoji: '😴', tab: 'checkins', sub: 'sleep', color: '#6BA8D6' },
+      { key: 'meds', label: 'Morning meds?', emoji: '💊', tab: 'checkins', sub: 'meds', color: '#6BA89E', quickAction: 'meds' },
+      { key: 'energy', label: "How's your energy?", emoji: '⚡', tab: 'checkins', sub: 'energy', color: '#E8907E' },
+      { key: 'window', label: 'Where is your body at?', emoji: '🧠', tab: 'checkins', sub: 'window', color: '#6BA89E' },
+      { key: 'feelings', label: 'What are you feeling?', emoji: '🎭', tab: 'checkins', sub: 'feelings', color: '#E8907E' },
       { key: 'word', label: "Today's word", emoji: '📖', tab: null, sub: 'word', color: '#F0C050' },
     ],
   },
   midday: {
     subtext: "How's the day going?",
     items: [
-      { key: 'water', label: 'Had some water?', emoji: '💧', tab: 'body', sub: 'water', color: '#6BA8D6', quickAction: 'water' },
+      { key: 'water', label: 'Had some water?', emoji: '💧', tab: 'checkins', sub: 'water', color: '#6BA8D6', quickAction: 'water' },
       { key: 'puppies', label: 'Puppy time!', emoji: '🐾', tab: 'puppies', sub: null, color: '#6BBF8A' },
-      { key: 'dbt', label: 'Try a skill', emoji: '💚', tab: 'recovery', sub: 'dbt', color: '#6BA89E' },
-      { key: 'energy', label: 'Energy check', emoji: '⚡', tab: 'body', sub: 'energy', color: '#E8907E' },
+      { key: 'dbt', label: 'Try a skill', emoji: '💚', tab: 'checkins', sub: 'dbt', color: '#6BA89E' },
+      { key: 'energy', label: 'Energy check', emoji: '⚡', tab: 'checkins', sub: 'energy', color: '#E8907E' },
     ],
   },
   evening: {
     subtext: 'Time to wind down.',
     items: [
-      { key: 'circles', label: 'How was today?', emoji: '⭕', tab: 'recovery', sub: 'circles', color: '#6BBF8A' },
-      { key: 'feelings', label: 'What are you feeling?', emoji: '🎭', tab: 'recovery', sub: 'feelings', color: '#E8907E' },
-      { key: 'meds', label: 'Evening meds?', emoji: '💊', tab: 'body', sub: 'meds', color: '#6BA89E', quickAction: 'meds' },
-      { key: 'sensory', label: 'Sensory check', emoji: '🧠', tab: 'body', sub: 'sensory', color: '#E8907E' },
-      { key: 'dissociation', label: 'Feel present?', emoji: '🌫', tab: 'body', sub: 'dissociation', color: '#6BA8D6' },
-      { key: 'bodySelf', label: 'Body-self check', emoji: '💜', tab: 'body', sub: 'bodySelf', color: '#E8907E' },
+      { key: 'circles', label: 'How was today?', emoji: '⭕', tab: 'checkins', sub: 'circles', color: '#6BBF8A' },
+      { key: 'feelings', label: 'What are you feeling?', emoji: '🎭', tab: 'checkins', sub: 'feelings', color: '#E8907E' },
+      { key: 'meds', label: 'Evening meds?', emoji: '💊', tab: 'checkins', sub: 'meds', color: '#6BA89E', quickAction: 'meds' },
+      { key: 'sensory', label: 'Sensory check', emoji: '🧠', tab: 'checkins', sub: 'sensory', color: '#E8907E' },
+      { key: 'dissociation', label: 'Feel present?', emoji: '🌫', tab: 'checkins', sub: 'dissociation', color: '#6BA8D6' },
+      { key: 'bodySelf', label: 'Body-self check', emoji: '💜', tab: 'checkins', sub: 'bodySelf', color: '#E8907E' },
       { key: 'puppies', label: 'Puppy training', emoji: '🐾', tab: 'puppies', sub: null, color: '#6BBF8A' },
-      { key: 'water', label: 'Water count', emoji: '💧', tab: 'body', sub: 'water', color: '#6BA8D6', quickAction: 'water' },
+      { key: 'water', label: 'Water count', emoji: '💧', tab: 'checkins', sub: 'water', color: '#6BA8D6', quickAction: 'water' },
     ],
   },
 }
-
-const CELEBRATION_MSGS = [
-  name => `You showed up for yourself today. 💚`,
-  name => `${name} is so proud of you. ✨`,
-  name => `Every check-in is practice. You're getting stronger.`,
-  name => `Full day! You are doing so well. 🌟`,
-  name => `Look at you. Showing up completely. 🎉`,
-]
 
 const ALL_SECTIONS = ['circles', 'feelings', 'sleep', 'meds', 'energy', 'water', 'dbt', 'sensory', 'puppies', 'word', 'window', 'dissociation', 'bodySelf']
 
@@ -75,474 +66,772 @@ function isDone(key, daily) {
   return false
 }
 
-// Smart suggestion — what to do next
-function getNextSuggestion(daily, timeOfDay) {
-  const flow = TIME_FLOWS[timeOfDay]
-  const undone = flow.items.filter(item => !isDone(item.key, daily) && item.tab)
-  return undone[0] || null
-}
-
-// ─── Word of Day ──────────────────────────────────────────────────────────
-function WordOfDay({ daily, onUpdate }) {
-  const [showDetail, setShowDetail] = useState(false)
-  const [word, setWord] = useState(null)
-
-  useEffect(() => {
-    if (daily?.wordOfDay?.word) {
-      const found = WORDS.find(w => w.id === daily.wordOfDay.word)
-      if (found) { setWord(found); return }
-    }
-    ;(async () => {
-      const seen = (await storage.get('diana-words-seen')) || []
-      const unseen = WORDS.filter(w => !seen.includes(w.id))
-      const pool = unseen.length > 0 ? unseen : WORDS
-      const idx = new Date().toISOString().slice(0, 10).split('-').reduce((a, b) => a + parseInt(b), 0) % pool.length
-      setWord(pool[idx])
-    })()
-  }, [daily?.wordOfDay?.word])
-
-  const learned = daily?.wordOfDay?.learned
-
-  const markLearned = async () => {
-    if (!word) return
-    const seen = (await storage.get('diana-words-seen')) || []
-    if (!seen.includes(word.id)) {
-      await storage.set('diana-words-seen', [...seen, word.id])
-    }
-    onUpdate({ wordOfDay: { word: word.id, learned: true } })
-    saveFeedback()
-  }
-
-  // Show a placeholder card while the word is loading
-  if (!word) return (
-    <div style={{
-      background: 'var(--card, white)', borderRadius: 20, padding: '16px 18px',
-      boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      border: '2px solid transparent', opacity: 0.5,
-    }}>
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5, marginBottom: 4 }}>WORD OF THE DAY</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-light, #8A7F7F)' }}>Loading…</div>
-      </div>
-      <div style={{ fontSize: 16 }}>📖</div>
-    </div>
-  )
-
-  if (!showDetail) return (
-    <div
-      onClick={() => { setShowDetail(true); tapFeedback() }}
-      style={{
-        background: 'var(--card, white)', borderRadius: 20, padding: '16px 18px',
-        boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        border: learned ? '2px solid #6BBF8A' : '2px solid transparent',
-        transition: 'transform 0.1s',
-      }}
-    >
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5, marginBottom: 4 }}>WORD OF THE DAY</div>
-        <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text, #3D3535)' }}>{word.word}</div>
-        <div style={{ fontSize: 13, color: 'var(--text-light, #8A7F7F)', marginTop: 2, fontWeight: 600 }}>{word.definition.slice(0, 50)}{word.definition.length > 50 ? '...' : ''}</div>
-      </div>
-      <div style={{ fontSize: learned ? 20 : 16 }}>{learned ? '✅' : '📖'}</div>
-    </div>
-  )
-
-  return (
-    <div style={{ background: 'var(--yellow-bg, #FFF8E1)', borderRadius: 20, padding: '18px', border: '2px solid #F0C050', boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))' }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5, marginBottom: 8 }}>WORD OF THE DAY</div>
-      <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text, #3D3535)', marginBottom: 8 }}>{word.word}</div>
-      <div style={{ fontSize: 15, color: 'var(--text, #3D3535)', fontWeight: 600, marginBottom: 10, lineHeight: 1.5 }}>{word.definition}</div>
-      <div style={{ fontSize: 14, color: 'var(--text-light, #8A7F7F)', fontStyle: 'italic', marginBottom: 14, lineHeight: 1.5 }}>"{word.sentence}"</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#6BA89E', marginBottom: 14 }}>
-        🗣 Say it out loud: <strong>"{word.word}"</strong>
-      </div>
-      {!learned ? (
-        <button
-          onClick={markLearned}
-          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#F0C050', color: '#3D3535', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
-        >
-          I learned this ✅
-        </button>
-      ) : (
-        <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 800, color: '#6BBF8A' }}>Great job learning this word! ✅</div>
-      )}
-      <button onClick={() => setShowDetail(false)} style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 14, border: 'none', background: 'transparent', color: 'var(--text-light, #8A7F7F)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-        Close
-      </button>
-    </div>
-  )
-}
-
-// ─── Quick-Tap Flow Card ──────────────────────────────────────────────────
-function FlowCard({ item, done, onTap, onQuickTap, justCompleted }) {
-  const handleTap = () => {
-    tapFeedback()
-    if (item.quickAction && !done && onQuickTap) {
-      onQuickTap(item)
-    } else {
-      onTap(item)
-    }
-  }
-
+// ─── Check-in Grid Row ───────────────────────────────────────────────────
+function CheckInRow({ label, emoji, done, onClick }) {
   return (
     <button
-      onClick={handleTap}
+      onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '14px 16px', borderRadius: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        borderRadius: 12,
         background: done ? 'var(--green-bg, #E6F7EC)' : 'var(--card, white)',
-        border: `2px solid ${done ? '#6BBF8A' : 'transparent'}`,
+        border: `1.5px solid ${done ? '#6BBF8A' : '#F0E8E0'}`,
         cursor: 'pointer',
         textAlign: 'left',
         width: '100%',
-        boxShadow: done ? 'none' : 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))',
-        transition: 'all 0.2s ease',
-        animation: justCompleted ? 'card-complete 0.3s ease-out' : 'none',
       }}
     >
-      {/* Colored emoji circle */}
+      <div style={{ fontSize: 16 }}>{emoji}</div>
       <div style={{
-        width: 40, height: 40, borderRadius: 12,
-        background: done ? '#E6F7EC' : `${item.color}15`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 20, flexShrink: 0,
+        flex: 1,
+        fontSize: 13,
+        fontWeight: 600,
+        color: done ? '#4A9A6A' : 'var(--text, #3D3535)',
       }}>
-        {done ? '✅' : item.emoji}
+        {label}
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: done ? '#4A9A6A' : 'var(--text, #3D3535)' }}>
-          {item.label}
-        </div>
-        {item.quickAction === 'water' && !done && (
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', marginTop: 1 }}>Tap to add a glass</div>
-        )}
-        {item.quickAction === 'meds' && !done && (
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', marginTop: 1 }}>Tap to mark done</div>
-        )}
+      <div style={{ fontSize: 14, color: done ? '#6BBF8A' : '#E0D5CC' }}>
+        {done ? '✅' : '⬜'}
       </div>
-      {!done && (
-        <span style={{ fontSize: 14, color: 'var(--text-light, #8A7F7F)', fontWeight: 600 }}>›</span>
-      )}
     </button>
   )
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────
-export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, onCreatureReaction, onMilestone, onOpenCrisis }) {
+// ─── Main Component ────────────────────────────────────────────────────────
+export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, creatureReaction, onCreatureReaction, onMilestone, onOpenCrisis }) {
   const timeOfDay = getTimeOfDay()
   const flow = TIME_FLOWS[timeOfDay]
   const checkInCount = countCheckIns(daily)
+  const moodState = getMoodState(checkInCount)
   const creatureName = profile?.creatureName || 'Friend'
   const creatureId = profile?.creature || 'puppy'
 
-  const doneCount = ALL_SECTIONS.filter(k => isDone(k, daily)).length
-  const allDone = doneCount === ALL_SECTIONS.length
+  const [weekData, setWeekData] = useState({})
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [showAllCheckIns, setShowAllCheckIns] = useState(false)
 
-  // Clinical awareness
-  const maniaScore = computeManiaScore(daily)
-  const nighttimeRisk = isNighttimeRiskWindow() ? assessNighttimeRisk(daily, profile) : null
-  const daysOutOfHospital = getDaysSinceDischarge(profile)
-  const postDischargeNote = daysOutOfHospital !== null && daysOutOfHospital <= 30
-    ? POST_DISCHARGE_RISK.getDailyNote(daysOutOfHospital)
-    : null
+  // Load week data on mount and when daily changes
+  useEffect(() => {
+    (async () => {
+      const data = {}
+      for (let i = 0; i < 7; i++) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const dateStr = d.toISOString().slice(0, 10)
+        const key = `diana-daily:${dateStr}`
+        try {
+          const val = await storage.get(key)
+          if (val) data[dateStr] = val
+        } catch (e) {
+          // Silently skip if not found
+        }
+      }
+      setWeekData(data)
+    })()
+  }, [daily])
 
-  const [showMore, setShowMore] = useState(false)
-  const [gridExpanded, setGridExpanded] = useState(false)
-  const [justCompleted, setJustCompleted] = useState(null)
-  const [activeSheet, setActiveSheet] = useState(null)
+  // Load feedback message on mount and when daily/week changes
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await getFeedbackMessage(daily, weekData, profile, timeOfDay)
+        const msg = result?.message || result || '💬 Keep going. You matter.'
+        setFeedbackMessage(typeof msg === 'string' ? msg : '💬 Keep going. You matter.')
+      } catch (e) {
+        setFeedbackMessage('💬 Keep going. You matter.')
+      }
+    })()
+  }, [daily, weekData, profile, timeOfDay])
 
-  // Personality greeting
-  const greeting = useMemo(() => {
-    const creature = CREATURES.find(c => c.id === creatureId)
-    const greetings = CREATURE_GREETINGS[creatureId]?.[timeOfDay]
-    if (greetings && creature) {
-      const idx = new Date().getDate() % greetings.length
-      return greetings[idx](creatureName)
+  // Determine next action
+  const nextAction = useMemo(() => {
+    return flow.items.find(item => !isDone(item.key, daily))
+  }, [daily, timeOfDay, flow])
+
+  const checkInCount_actual = countCheckIns(daily)
+  const allDone = checkInCount_actual === TOTAL_CHECKINS
+
+  // Check if current hour is 21-4 (night)
+  const hour = new Date().getHours()
+  const isNight = hour >= 21 || hour < 4
+
+  const handleNextActionTap = () => {
+    if (nextAction) {
+      tapFeedback()
+      onNavigate(nextAction.tab, nextAction.sub)
     }
-    // Fallback
-    const fallbacks = { morning: '☀️ Good morning!', midday: '🌤 Afternoon!', evening: '🌙 Evening time.' }
-    return fallbacks[timeOfDay]
-  }, [creatureId, creatureName, timeOfDay])
+  }
 
-  const celebMsg = useMemo(() => {
-    const fn = CELEBRATION_MSGS[Math.floor(Date.now() / 60000) % CELEBRATION_MSGS.length]
-    return fn(creatureName)
-  }, [creatureName])
-
-  // Show first 4 items by default, rest behind "Show more"
-  const visibleItems = showMore ? flow.items : flow.items.slice(0, 4)
-  const hasMore = flow.items.length > 4
-
-  // Smart suggestion
-  const suggestion = useMemo(() => getNextSuggestion(daily, timeOfDay), [daily, timeOfDay])
-
-  const handleFlowTap = (item) => {
+  const handleCheckInItemTap = (item) => {
+    tapFeedback()
     if (item.tab) {
       onNavigate(item.tab, item.sub)
     }
   }
 
-  // Quick-tap handlers for water and meds
-  const handleQuickTap = (item) => {
+  const handleQuickAction = (item) => {
     if (item.quickAction === 'water') {
       const count = (daily?.water?.count || 0) + 1
       onNavigate('__updateDaily', { water: { count: Math.min(8, count) } })
       onToast?.(`💧 ${Math.min(8, count)}/8 glasses`)
-      triggerCompletion(item.key)
     } else if (item.quickAction === 'meds') {
       const hour = new Date().getHours()
       const field = hour < 17 ? 'morning' : 'evening'
       onNavigate('__updateDaily', { meds: { ...(daily?.meds || {}), [field]: true } })
       onToast?.('💊 Meds logged!')
-      triggerCompletion(item.key)
     }
   }
 
-  const triggerCompletion = useCallback((key) => {
-    setJustCompleted(key)
-    saveFeedback()
-    setTimeout(() => setJustCompleted(null), 400)
+  // ─── Word of Day State and Logic ─────────────────────────────────────
+  const [todayWord, setTodayWord] = useState(null)
+  const [wordProgress, setWordProgress] = useState({})
+  const [practiceInput, setPracticeInput] = useState('')
+  const [showPracticeInput, setShowPracticeInput] = useState(false)
 
-    // Check for milestone
-    const prevCount = countCheckIns(daily)
-    // We don't have newDaily yet, but we can approximate
-    const approxNewCount = prevCount + (isDone(key, daily) ? 0 : 1)
-    const milestone = checkMilestone(prevCount, approxNewCount)
-    if (milestone) {
-      milestoneFeedback()
-      onMilestone?.(milestone)
-    }
+  // Load Word of Day and progress on mount and when daily changes
+  useEffect(() => {
+    (async () => {
+      try {
+        // Load word progress from storage
+        let progress = (await storage.get('diana-words-progress')) || {}
 
-    // Creature reaction
-    const reaction = CREATURE_REACTIONS[key]
-    if (reaction) {
-      onCreatureReaction?.(reaction.animation)
+        // Pick today's word based on spaced repetition
+        const picked = pickWordOfDay(progress)
+
+        // Mark as seen if not already seen
+        if (picked && !progress[picked.id]?.seen) {
+          progress[picked.id] = {
+            seen: true,
+            learned: false,
+            seenCount: 1,
+            lastSeen: today(),
+          }
+          await storage.set('diana-words-progress', progress)
+        }
+
+        setWordProgress(progress)
+        setTodayWord(picked)
+
+        // Load practice sentence if already saved
+        if (daily?.wordOfDay?.sentence) {
+          setPracticeInput(daily.wordOfDay.sentence)
+        }
+      } catch (e) {
+        console.error('Failed to load word of day:', e)
+      }
+    })()
+  }, [daily])
+
+  // Pick word: prefer unseen, then not-learned (least recent), then all learned
+  const pickWordOfDay = (progress) => {
+    const now = new Date().toISOString().slice(0, 10)
+
+    // Avoid repeating today's word
+    const lastWordKey = `diana-word-of-day:${now}`
+
+    // Split words into categories
+    const unseen = []
+    const seenNotLearned = []
+    const learned = []
+
+    WORDS.forEach(w => {
+      const p = progress[w.id] || { seen: false, learned: false }
+      if (!p.seen) {
+        unseen.push(w)
+      } else if (!p.learned) {
+        seenNotLearned.push(w)
+      } else {
+        learned.push(w)
+      }
+    })
+
+    // Sort "not learned" by least recently seen
+    seenNotLearned.sort((a, b) => {
+      const aDate = (progress[a.id]?.lastSeen || '1970-01-01')
+      const bDate = (progress[b.id]?.lastSeen || '1970-01-01')
+      return aDate.localeCompare(bDate)
+    })
+
+    // Pick: unseen first, then not-learned, then learned
+    let word = unseen[0] || seenNotLearned[0] || learned[Math.floor(Math.random() * learned.length)]
+
+    if (!word) word = WORDS[0]
+    return word
+  }
+
+  const handleWordLearned = async () => {
+    try {
+      if (!todayWord) return
+
+      // Update progress
+      const progress = { ...wordProgress }
+      const p = progress[todayWord.id] || { seen: true, learned: false, seenCount: 0, lastSeen: '' }
+      progress[todayWord.id] = {
+        seen: true,
+        learned: true,
+        seenCount: (p.seenCount || 1),
+        lastSeen: today(),
+      }
+      await storage.set('diana-words-progress', progress)
+      setWordProgress(progress)
+
+      // Mark daily task as complete
+      onNavigate('__updateDaily', { wordOfDay: { learned: true, sentence: practiceInput } })
+
+      onToast?.('📖 Great word! Keep using it!')
+    } catch (e) {
+      console.error('Failed to mark word learned:', e)
     }
-  }, [daily, onMilestone, onCreatureReaction])
+  }
+
+  const handleSavePractice = () => {
+    try {
+      onNavigate('__updateDaily', { wordOfDay: { sentence: practiceInput } })
+      onToast?.('💭 Practice saved!')
+    } catch (e) {
+      console.error('Failed to save practice:', e)
+    }
+  }
+
+  // Count learned words
+  const learnedCount = useMemo(() => {
+    return Object.values(wordProgress).filter(p => p.learned).length
+  }, [wordProgress])
 
   return (
-    <div style={{ padding: '0 16px 100px', animation: 'fade-up 0.25s ease-out' }}>
+    <div style={{ padding: '0 20px 100px', animation: 'fade-up 0.25s ease-out' }}>
 
-      {/* Progress ring + greeting */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        background: 'var(--card, white)', borderRadius: 20, padding: '16px 18px', marginBottom: 16,
-        boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))',
-      }}>
-        <ProgressRing count={doneCount} size={64} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text, #3D3535)', lineHeight: 1.3, marginBottom: 3 }}>
-            {greeting}
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light, #8A7F7F)' }}>
-            {allDone ? 'All done for today! 🌟' : `${doneCount} of ${ALL_SECTIONS.length} done`}
-          </div>
-        </div>
-      </div>
-
-      {/* Word of the Day — shown at the top so Diana sees it every morning */}
-      <div style={{ marginBottom: 16 }}>
-        <WordOfDay
-          daily={daily}
-          onUpdate={(patch) => onNavigate('__updateDaily', patch)}
+      {/* 1. CreatureScene */}
+      <div style={{ marginBottom: 12 }}>
+        <CreatureScene
+          creatureId={creatureId}
+          moodState={moodState}
+          streak={profile.streak || 0}
+          reaction={creatureReaction}
+          timeOfDay={timeOfDay}
+          isNightRisk={isNight}
+          size={160}
         />
       </div>
 
-      {/* Clinical awareness banners — consolidated to max ONE non-nighttime banner
-          to avoid overwhelming the home screen on hard days.
-          Priority: post-discharge+mania combined > mania alone > post-discharge alone */}
-      {postDischargeNote && maniaScore >= 6 ? (
-        // Combined: post-discharge window + mania signals
-        <div style={{
-          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
-          padding: '12px 16px', marginBottom: 16,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
-            You're {daysOutOfHospital} days out of the hospital, and your sleep has been short with your energy up. Your brain needs extra time and support right now. Worth checking in with your team. 💛
-          </div>
-        </div>
-      ) : maniaScore >= 8 ? (
-        <div style={{
-          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
-          padding: '12px 16px', marginBottom: 16,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
-            Your sleep has been short but your energy has been high. That pattern sometimes means your mood is shifting. Worth checking in with your team this week. 💛
-          </div>
-        </div>
-      ) : maniaScore >= 6 ? (
-        <div style={{
-          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
-          padding: '12px 16px', marginBottom: 16,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
-            Short sleep + good energy can be a sign your mood is shifting a little. Keep an eye on it. 💛
-          </div>
-        </div>
-      ) : postDischargeNote ? (
-        <div style={{
-          background: '#E8F1FA', border: '2px solid #6BA8D6', borderRadius: 16,
-          padding: '12px 16px', marginBottom: 16,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
-            {postDischargeNote}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Nighttime check-in card — shown 9pm-4am when risk conditions are met.
-          This is separate from the above because it's a different kind of message:
-          a real-time check-in, not a pattern observation. */}
-      {nighttimeRisk && (
-        <div style={{
-          background: '#E8F4F1', border: '2px solid #6BA89E', borderRadius: 16,
-          padding: '14px 16px', marginBottom: 16,
-        }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: nighttimeRisk.showSafetyPlan ? 8 : 0 }}>
-            {nighttimeRisk.message}
-          </div>
-          {nighttimeRisk.showSafetyPlan && onOpenCrisis && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={onOpenCrisis}
-                style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#6BA89E', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-              >
-                Safety plan
-              </button>
-              <button
-                onClick={() => onOpenCrisis('coping-skills')}
-                style={{ flex: 1, padding: '10px', borderRadius: 12, border: '2px solid #6BA89E', background: '#E8F4F1', color: '#6BA89E', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-              >
-                Coping plan
-              </button>
-            </div>
-          )}
+      {/* 1b. Luis Context Banner (T2-07) */}
+      {profile?.luisShift && (
+        <div style={{ marginBottom: 12 }}>
+          {(() => {
+            const dayOfWeek = new Date().getDay()
+            const isLuisWorkDay = profile.luisShift?.workDays?.includes(dayOfWeek)
+            return (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: 20,
+                background: isLuisWorkDay ? 'var(--blue-bg, #E8F1FA)' : 'var(--green-bg, #E6F7EC)',
+                border: `1.5px solid ${isLuisWorkDay ? 'var(--blue, #6BA8D6)' : 'var(--green, #6BBF8A)'}`,
+                textAlign: 'center',
+                fontSize: 13,
+                fontWeight: 600,
+                color: isLuisWorkDay ? 'var(--blue, #6BA8D6)' : 'var(--green, #6BBF8A)',
+              }}>
+                {isLuisWorkDay ? '🏢 Luis is at work today' : '🏡 Luis is home today'}
+              </div>
+            )
+          })()}
         </div>
       )}
 
-      {/* All done celebration */}
-      {allDone && (
-        <div style={{
-          background: 'var(--green-bg, #E6F7EC)', borderRadius: 20, padding: '16px 18px', marginBottom: 16,
-          border: '2px solid #6BBF8A', textAlign: 'center',
-          animation: 'milestone-glow 2s ease-in-out 2',
-        }}>
-          <div style={{ fontSize: 28, marginBottom: 6 }}>🌟</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text, #3D3535)', lineHeight: 1.4 }}>{celebMsg}</div>
-        </div>
-      )}
-
-      {/* Time-of-day flow — warm cards */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-light, #8A7F7F)', marginBottom: 10, paddingLeft: 2 }}>
-          {flow.subtext} <span style={{ fontWeight: 600, fontSize: 12 }}>Do what feels right.</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visibleItems.map(item => (
-            <FlowCard
-              key={item.key}
-              item={item}
-              done={isDone(item.key, daily)}
-              onTap={handleFlowTap}
-              onQuickTap={handleQuickTap}
-              justCompleted={justCompleted === item.key}
-            />
-          ))}
-        </div>
-
-        {/* Show more / less */}
-        {hasMore && (
-          <button
-            onClick={() => { setShowMore(!showMore); tapFeedback() }}
-            style={{
-              width: '100%', padding: '10px', borderRadius: 12, border: 'none',
-              background: 'transparent', color: 'var(--primary, #6BA89E)',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 6,
-            }}
-          >
-            {showMore ? 'Show less ↑' : `Show ${flow.items.length - 4} more ↓`}
-          </button>
-        )}
+      {/* 2. Speech Bubble (feedback card) */}
+      <div style={{
+        background: 'var(--card, white)',
+        borderRadius: 20,
+        padding: '14px 18px',
+        margin: '0 0 12px 0',
+        boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+        fontSize: 15,
+        fontWeight: 700,
+        color: 'var(--text, #3D3535)',
+        lineHeight: 1.5,
+        textAlign: 'center',
+        minHeight: 48,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {feedbackMessage}
       </div>
 
-      {/* Smart suggestion — after completing a check-in */}
-      {suggestion && doneCount > 0 && !allDone && (
+      {/* 3. One Next Action */}
+      {nextAction ? (
         <button
-          onClick={() => { handleFlowTap(suggestion); tapFeedback() }}
+          onClick={handleNextActionTap}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '12px 16px', borderRadius: 16, marginBottom: 16,
-            background: 'var(--primary-light, #E8F4F1)', border: '2px solid var(--primary, #6BA89E)',
-            cursor: 'pointer', textAlign: 'left',
+            width: '100%',
+            padding: '18px 20px',
+            borderRadius: 20,
+            border: '2px solid #E8F4F1',
+            background: 'var(--card, white)',
+            boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            cursor: 'pointer',
+            textAlign: 'left',
+            marginBottom: 16,
           }}
         >
-          <span style={{ fontSize: 16 }}>{suggestion.emoji}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary, #6BA89E)' }}>Up next?</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text, #3D3535)' }}>{suggestion.label}</div>
+          <div style={{
+            width: 48, height: 48, borderRadius: 16,
+            background: '#E8F4F1',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 24,
+          }}>
+            {nextAction.emoji}
           </div>
-          <span style={{ fontSize: 14, color: 'var(--primary, #6BA89E)', fontWeight: 700 }}>→</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text, #3D3535)' }}>
+              {nextAction.label}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', marginTop: 2 }}>
+              Tap to check in
+            </div>
+          </div>
+          <div style={{ fontSize: 20, color: 'var(--text-light, #8A7F7F)' }}>→</div>
         </button>
+      ) : (
+        <div style={{
+          margin: '0 0 16px 0',
+          padding: '20px',
+          borderRadius: 20,
+          background: '#E6F7EC',
+          border: '2px solid #6BBF8A',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>✨</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#3D3535' }}>
+            You showed up completely today.
+          </div>
+        </div>
       )}
 
-      {/* Collapsible status grid */}
-      <div style={{
-        background: 'var(--card, white)', borderRadius: 20, padding: '14px 18px',
-        boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))', marginBottom: 16,
-      }}>
-        <button
-          onClick={() => { setGridExpanded(!gridExpanded); tapFeedback() }}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          }}
-        >
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5 }}>ALL CHECK-INS</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-light, #8A7F7F)' }}>{doneCount}/{ALL_SECTIONS.length}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-light, #8A7F7F)', transition: 'transform 0.2s', transform: gridExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+      {/* 4. Dot Progress or Bar Progress */}
+      {TOTAL_CHECKINS > 10 ? (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+          margin: '0 0 16px 0',
+          padding: '12px 16px',
+          borderRadius: 16,
+          background: 'var(--card, white)',
+          boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+        }}>
+          <div style={{
+            width: '100%',
+            height: 6,
+            borderRadius: 3,
+            background: '#E8E0D8',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${(checkInCount_actual / TOTAL_CHECKINS) * 100}%`,
+              background: '#6BA89E',
+              borderRadius: 3,
+              transition: 'width 0.5s ease',
+            }} />
           </div>
-        </button>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--text-light, #8A7F7F)',
+          }}>
+            {checkInCount_actual} of {TOTAL_CHECKINS} check-ins
+          </span>
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          margin: '0 0 16px 0',
+          padding: '12px 16px',
+          borderRadius: 16,
+          background: 'var(--card, white)',
+          boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+        }}>
+          {Array.from({ length: TOTAL_CHECKINS }).map((_, i) => (
+            <div key={i} style={{
+              width: i < checkInCount_actual ? 10 : 8,
+              height: i < checkInCount_actual ? 10 : 8,
+              borderRadius: '50%',
+              background: i < checkInCount_actual ? '#6BA89E' : '#E8E0D8',
+              transition: 'all 0.3s ease',
+            }} />
+          ))}
+          <span style={{
+            marginLeft: 8,
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--text-light, #8A7F7F)',
+          }}>
+            {checkInCount_actual} of {TOTAL_CHECKINS}
+          </span>
+        </div>
+      )}
 
-        {gridExpanded && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12, animation: 'fade-up 0.2s ease-out' }}>
-            {[
-              { key: 'sleep', label: 'Sleep', emoji: '😴' },
-              { key: 'meds', label: 'Meds', emoji: '💊' },
-              { key: 'energy', label: 'Energy', emoji: '⚡' },
-              { key: 'water', label: 'Water', emoji: '💧' },
-              { key: 'circles', label: 'Circles', emoji: '⭕' },
-              { key: 'feelings', label: 'Feelings', emoji: '🎭' },
-              { key: 'dbt', label: 'DBT', emoji: '💚' },
-              { key: 'sensory', label: 'Sensory', emoji: '🧠' },
-              { key: 'window', label: 'Window', emoji: '🧠' },
-              { key: 'dissociation', label: 'Dissoc.', emoji: '🌫' },
-              { key: 'bodySelf', label: 'Body-Self', emoji: '💜' },
-              { key: 'puppies', label: 'Puppies', emoji: '🐾' },
-              { key: 'word', label: 'Word', emoji: '📖' },
-            ].map(s => {
-              const done = isDone(s.key, daily)
-              return (
+      {/* 5. Values Anchor Display (T1-12) */}
+      {profile?.valuesAnchor?.goals?.length > 0 && (
+        <div style={{
+          background: 'var(--card, white)',
+          borderRadius: 16,
+          padding: '14px 16px',
+          marginBottom: 12,
+          borderLeft: '4px solid var(--primary, #6BA89E)',
+          boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+        }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'var(--text-light, #8A7F7F)',
+            letterSpacing: 0.5,
+            marginBottom: 8,
+            textTransform: 'uppercase',
+          }}>
+            Working toward:
+          </div>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}>
+            {profile.valuesAnchor.goals.map((goal, idx) => (
+              goal && (
                 <div
-                  key={s.key}
+                  key={idx}
                   style={{
-                    background: done ? 'var(--green-bg, #E6F7EC)' : '#F8F4F0',
-                    borderRadius: 12, padding: '10px 8px', textAlign: 'center',
-                    border: `1.5px solid ${done ? '#6BBF8A' : '#F0E8E0'}`,
+                    fontSize: 12,
+                    color: 'var(--text, #3D3535)',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
                   }}
                 >
-                  <div style={{ fontSize: 18 }}>{s.emoji}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: done ? '#4A9A6A' : 'var(--text-light, #8A7F7F)', marginTop: 2 }}>{s.label}</div>
-                  <div style={{ fontSize: 14, marginTop: 2 }}>{done ? '✅' : '⬜'}</div>
+                  <span style={{ color: 'var(--primary, #6BA89E)', fontWeight: 700 }}>✓</span>
+                  <span>{goal}</span>
                 </div>
               )
-            })}
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Schedule Preview (T2-06) */}
+      {profile?.schedule && (() => {
+        const dayOfWeek = new Date().getDay()
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+        const currentSchedule = profile?.schedule || { weekday: [], weekend: [] }
+        const todaySchedule = isWeekend ? (currentSchedule.weekend || []) : (currentSchedule.weekday || [])
+
+        const parseTime = (timeStr) => {
+          const [time, period] = timeStr.split(' ')
+          let [hours, minutes] = time.split(':').map(Number)
+          if (period === 'PM' && hours !== 12) hours += 12
+          if (period === 'AM' && hours === 12) hours = 0
+          return hours * 60 + minutes
+        }
+
+        const now = new Date()
+        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+        let nextBlock = null
+
+        for (let i = 0; i < todaySchedule.length; i++) {
+          const block = todaySchedule[i]
+          const blockTime = parseTime(block.time)
+          if (currentMinutes < blockTime) {
+            nextBlock = block
+            break
+          }
+        }
+
+        if (nextBlock) {
+          return (
+            <div style={{
+              background: 'var(--card, white)',
+              borderRadius: 16,
+              padding: '12px 14px',
+              marginBottom: 12,
+              boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}>
+              <span style={{ fontSize: 14, color: 'var(--primary, #6BA89E)', fontWeight: 700 }}>
+                {nextBlock.time}
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--text, #3D3535)', fontWeight: 600, flex: 1 }}>
+                {nextBlock.label}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-light, #8A7F7F)' }}>Next up</span>
+            </div>
+          )
+        }
+        return null
+      })()}
+
+      {/* 7. See all check-ins expandable */}
+      <div style={{
+        background: 'var(--card, white)',
+        borderRadius: 20,
+        padding: '16px 18px',
+        boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+      }}>
+        <button
+          onClick={() => { setShowAllCheckIns(!showAllCheckIns); tapFeedback() }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            marginBottom: showAllCheckIns ? 12 : 0,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-light, #8A7F7F)', letterSpacing: 0.5 }}>
+            ALL CHECK-INS
+          </div>
+          <span style={{
+            fontSize: 12,
+            color: 'var(--text-light, #8A7F7F)',
+            transition: 'transform 0.2s',
+            transform: showAllCheckIns ? 'rotate(180deg)' : 'rotate(0)',
+          }}>
+            ▼
+          </span>
+        </button>
+
+        {showAllCheckIns && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            animation: 'fade-up 0.2s ease-out',
+          }}>
+            {[
+              { key: 'sleep', label: 'How did you sleep?', emoji: '😴', tab: 'checkins', sub: 'sleep' },
+              { key: 'meds', label: 'Morning meds?', emoji: '💊', tab: 'checkins', sub: 'meds', quickAction: 'meds' },
+              { key: 'energy', label: "How's your energy?", emoji: '⚡', tab: 'checkins', sub: 'energy' },
+              { key: 'water', label: 'Had some water?', emoji: '💧', tab: 'checkins', sub: 'water', quickAction: 'water' },
+              { key: 'window', label: 'Where is your body at?', emoji: '🧠', tab: 'checkins', sub: 'window' },
+              { key: 'feelings', label: 'What are you feeling?', emoji: '🎭', tab: 'checkins', sub: 'feelings' },
+              { key: 'circles', label: 'How was today?', emoji: '⭕', tab: 'checkins', sub: 'circles' },
+              { key: 'dbt', label: 'Try a skill', emoji: '💚', tab: 'checkins', sub: 'dbt' },
+              { key: 'sensory', label: 'Sensory check', emoji: '🧠', tab: 'checkins', sub: 'sensory' },
+              { key: 'dissociation', label: 'Feel present?', emoji: '🌫', tab: 'checkins', sub: 'dissociation' },
+              { key: 'bodySelf', label: 'Body-self check', emoji: '💜', tab: 'checkins', sub: 'bodySelf' },
+              { key: 'puppies', label: 'Puppy training', emoji: '🐾', tab: 'puppies', sub: null },
+              { key: 'word', label: "Today's word", emoji: '📖', tab: 'checkins', sub: 'word' },
+            ].map(item => (
+              <CheckInRow
+                key={item.key}
+                label={item.label}
+                emoji={item.emoji}
+                done={isDone(item.key, daily)}
+                onClick={() => {
+                  if (item.quickAction && !isDone(item.key, daily)) {
+                    handleQuickAction(item)
+                  } else {
+                    handleCheckInItemTap(item)
+                  }
+                }}
+              />
+            ))}
           </div>
         )}
       </div>
+
+      {/* 6. Word of the Day Section */}
+      {todayWord && (
+        <div style={{
+          background: 'var(--card, white)',
+          borderRadius: 20,
+          padding: '18px',
+          boxShadow: '0 2px 8px rgba(61,53,53,0.06)',
+          marginTop: 16,
+          animation: 'fade-up 0.25s ease-out',
+        }}>
+          {/* Progress bar: Words learned */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 14,
+            paddingBottom: 12,
+            borderBottom: '1px solid #F0E8E0',
+          }}>
+            <div style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--text-light, #8A7F7F)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}>
+              Words I learned
+            </div>
+            <div style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: 'var(--primary, #6BA89E)',
+            }}>
+              {learnedCount} / 35
+            </div>
+          </div>
+
+          {/* Word card */}
+          <div style={{
+            marginBottom: 16,
+          }}>
+            {/* Word and definition */}
+            <div style={{
+              marginBottom: 12,
+            }}>
+              <div style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: 'var(--text, #3D3535)',
+                marginBottom: 4,
+              }}>
+                {todayWord.word}
+              </div>
+              <div style={{
+                fontSize: 13,
+                color: 'var(--text, #3D3535)',
+                fontWeight: 500,
+                lineHeight: 1.5,
+              }}>
+                {todayWord.definition}
+              </div>
+            </div>
+
+            {/* Example sentence */}
+            <div style={{
+              background: '#FFF8F3',
+              borderRadius: 12,
+              padding: '10px 12px',
+              marginBottom: 12,
+              fontSize: 12,
+              color: 'var(--text, #3D3535)',
+              fontStyle: 'italic',
+              lineHeight: 1.4,
+              borderLeft: '3px solid var(--primary, #6BA89E)',
+            }}>
+              {todayWord.sentence}
+            </div>
+
+            {/* Practice sentence input (shown if not learned or user taps practice) */}
+            {!daily?.wordOfDay?.learned && (
+              <div style={{
+                marginBottom: 12,
+              }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--text-light, #8A7F7F)',
+                  marginBottom: 6,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                }}>
+                  Your sentence
+                </label>
+                <textarea
+                  value={practiceInput}
+                  onChange={(e) => setPracticeInput(e.target.value)}
+                  placeholder="Can you use this word in your own sentence?"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1.5px solid #F0E8E0',
+                    fontFamily: 'Nunito, sans-serif',
+                    fontSize: 13,
+                    color: 'var(--text, #3D3535)',
+                    resize: 'none',
+                    minHeight: 60,
+                    boxSizing: 'border-box',
+                    fontWeight: 500,
+                  }}
+                />
+                {practiceInput && (
+                  <button
+                    onClick={handleSavePractice}
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: '#E8F4F1',
+                      color: 'var(--primary, #6BA89E)',
+                      cursor: 'pointer',
+                      width: '100%',
+                    }}
+                  >
+                    Save
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* I learned this button OR already learned badge */}
+            {!daily?.wordOfDay?.learned ? (
+              <button
+                onClick={handleWordLearned}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: 'var(--primary, #6BA89E)',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  transition: 'transform 0.1s ease',
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'scale(0.98)'
+                  tapFeedback()
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
+                I learned this word
+              </button>
+            ) : (
+              <div style={{
+                background: '#E6F7EC',
+                borderRadius: 12,
+                padding: '12px 16px',
+                textAlign: 'center',
+                color: '#4A9A6A',
+                fontWeight: 700,
+                fontSize: 13,
+              }}>
+                ✅ You learned this word today!
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

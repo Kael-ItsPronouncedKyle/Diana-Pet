@@ -7,6 +7,7 @@ import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 import TopNav from '../shared/TopNav.jsx'
 import { HARM_REDUCTION_MESSAGES, detectsCoreSchema, CORE_SCHEMA_RESPONSE } from '../../constants/clinicalConfig.js'
+import ConnectionSection from '../checkins/ConnectionSection.jsx'
 
 // ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
 
@@ -52,6 +53,24 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
                 </span>
               )
             })}
+          </div>
+          {/* T2-01: Emotion Vocabulary Builder */}
+          {selected.map(id => {
+            const em = allEmotions.find(e => e.id === id)
+            if (!em) return null
+            return (
+              <div key={`vocab-${id}`} style={{ textAlign: 'left', background: 'white', borderRadius: 14, padding: '12px 14px', marginTop: 8 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#3D3535', marginBottom: 4 }}>{em.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.4, marginBottom: 6 }}>{em.def}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#6BA89E', fontStyle: 'italic' }}>
+                  Say it: "I feel {em.label.toLowerCase()}."
+                </div>
+              </div>
+            )
+          })}
+          {/* Emotion count tracker */}
+          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: '#6BA89E' }}>
+            You've named {selected.length} feeling{selected.length !== 1 ? 's' : ''} today. Your emotional vocabulary is growing.
           </div>
         </div>
         <button
@@ -374,6 +393,16 @@ function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
     await storage.set('diana-dbt-history', history)
   }
 
+  // T1-14: Skill effectiveness tracking
+  const rateSkill = async (effective) => {
+    onUpdate({ dbt: { ...daily?.dbt, effective } })
+    // Update profile skill effectiveness stats
+    const history = (await storage.get('diana-dbt-history')) || []
+    const last = history[history.length - 1]
+    if (last) last.effective = effective
+    await storage.set('diana-dbt-history', history)
+  }
+
   const CAT_COLORS = {
     'mindfulness': '#6BA89E',
     'distress-tolerance': '#6BA8D6',
@@ -404,8 +433,25 @@ function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
             I practiced this ✅
           </button>
         ) : (
-          <div style={{ textAlign: 'center', padding: '14px', background: '#E6F7EC', borderRadius: 14, color: '#4A9A6A', fontSize: 15, fontWeight: 800 }}>
-            Nice work. That's a real skill you just used. 💪
+          <div>
+            <div style={{ textAlign: 'center', padding: '14px', background: '#E6F7EC', borderRadius: 14, color: '#4A9A6A', fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
+              Nice work. That's a real skill you just used. 💪
+            </div>
+            {/* T1-14: Skill Effectiveness */}
+            {daily?.dbt?.effective === undefined && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#8A7F7F', marginBottom: 8 }}>Did it help?</div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button onClick={() => rateSkill(true)} style={{ padding: '12px 24px', borderRadius: 14, border: '2px solid #6BBF8A', background: '#E6F7EC', color: '#4A9A6A', fontSize: 18, fontWeight: 800, cursor: 'pointer', minHeight: 44 }}>👍 Yes</button>
+                  <button onClick={() => rateSkill(false)} style={{ padding: '12px 24px', borderRadius: 14, border: '2px solid #E87B7B', background: '#FDECEC', color: '#E87B7B', fontSize: 18, fontWeight: 800, cursor: 'pointer', minHeight: 44 }}>👎 Not really</button>
+                </div>
+              </div>
+            )}
+            {daily?.dbt?.effective !== undefined && (
+              <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#8A7F7F' }}>
+                {daily.dbt.effective ? 'Glad it helped! We\'ll remember that. 💚' : 'That\'s okay. Not every skill fits every day. 💙'}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1067,10 +1113,10 @@ function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
 
 // ─── Main Tab ──────────────────────────────────────────────────────────────
 
-const SUBS = ['circles', 'feelings', 'dbt', 'urges', 'chain']
-const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT', urges: '🔴 Urges', chain: '🔗 Chain' }
+const SUBS = ['circles', 'feelings', 'dbt', 'urges', 'chain', 'connection']
+const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT', urges: '🔴 Urges', chain: '🔗 Chain', connection: '💜 Connect' }
 
-export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub, fromHome, onGoHome }) {
+export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub, fromHome, onGoHome, focusMode }) {
   const [sub, setSub] = useState(initialSub || 'circles')
 
   return (
@@ -1078,19 +1124,21 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub,
       <div style={{ padding: '12px 16px' }}>
         <TopNav onGoHome={onGoHome} />
       </div>
-      {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {SUBS.map(s => (
-          <button key={s} onClick={() => setSub(s)} style={{
-            padding: '10px 10px', borderRadius: 14, border: 'none', whiteSpace: 'nowrap',
-            background: sub === s ? '#6BA89E' : '#F0E8E0',
-            color: sub === s ? 'white' : '#3D3535',
-            fontSize: 12, fontWeight: 800, cursor: 'pointer',
-          }}>
-            {SUB_LABELS[s]}
-          </button>
-        ))}
-      </div>
+      {/* Sub-tab bar — hidden in focus mode */}
+      {!focusMode && (
+        <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {SUBS.map(s => (
+            <button key={s} onClick={() => setSub(s)} style={{
+              padding: '10px 10px', borderRadius: 14, border: 'none', whiteSpace: 'nowrap',
+              background: sub === s ? '#6BA89E' : '#F0E8E0',
+              color: sub === s ? 'white' : '#3D3535',
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>
+              {SUB_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {/* 24-hour urge reflection — shows at top of urges tab */}
@@ -1100,6 +1148,7 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub,
         {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'chain' && <ChainAnalysis daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'connection' && <ConnectionSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
       </div>
     </div>
   )

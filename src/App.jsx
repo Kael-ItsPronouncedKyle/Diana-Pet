@@ -5,7 +5,6 @@ import { countCheckIns, computeMedStreak, getMoodState, checkMilestone, CREATURE
 import { supabase, supabaseEnabled } from './lib/supabase.js'
 import { setHapticsEnabled, milestoneFeedback, celebrationFeedback } from './utils/haptics.js'
 
-import Pet from './components/Pet/Pet.jsx'
 import { MiniPet } from './components/Pet/Pet.jsx'
 import BottomNav from './components/shared/BottomNav.jsx'
 import Toast from './components/shared/Toast.jsx'
@@ -15,8 +14,7 @@ import AuthModal from './components/modals/AuthModal.jsx'
 import CrisisToolkit, { CrisisButton } from './components/modals/CrisisToolkit.jsx'
 import SettingsModal from './components/modals/SettingsModal.jsx'
 import HomeTab from './components/tabs/HomeTab.jsx'
-import RecoveryTab from './components/tabs/RecoveryTab.jsx'
-import BodyTab from './components/tabs/BodyTab.jsx'
+import CheckinsTab from './components/tabs/CheckinsTab.jsx'
 import PuppiesTab from './components/tabs/PuppiesTab.jsx'
 import WeekTab from './components/tabs/WeekTab.jsx'
 
@@ -35,7 +33,7 @@ const EVENT_MESSAGES = {
   energy_great: "Great energy day! You're doing amazing. 🌟",
 }
 
-const TAB_ORDER = ['home', 'recovery', 'body', 'puppies', 'week']
+const TAB_ORDER = ['home', 'checkins', 'puppies', 'week']
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -52,7 +50,7 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState(null)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [creatureReaction, setCreatureReaction] = useState(null)
-  const [slideDir, setSlideDir] = useState(null) // 'left' | 'right' | null
+  // Slide transitions removed — using crossfade only
   const [darkMode, setDarkMode] = useState(false)
   const [breathingDone, setBreathingDone] = useState(false)
 
@@ -223,6 +221,10 @@ export default function App() {
     if (patch.circles?.choice && !prev.circles?.choice) return 'circles'
     if (patch.emotions?.length > 0 && !(prev.emotions?.length > 0)) return 'feelings'
     if (patch.puppies) return 'puppies'
+    if (patch.connection && !prev.connection) return 'connection'
+    if (patch.meals && !prev.meals) return 'meals'
+    if (patch.win && !prev.win) return 'win'
+    if (patch.reading?.minutes && !prev.reading?.minutes) return 'reading'
     return null
   }
 
@@ -230,7 +232,7 @@ export default function App() {
     handleTabChange('home')
   }, [])
 
-  // Navigation handler with slide direction
+  // Navigation handler
   const handleNavigate = useCallback((targetTab, targetSub) => {
     if (targetTab === '__updateDaily') {
       updateDaily(targetSub)
@@ -239,26 +241,15 @@ export default function App() {
     if (tab === 'home' && targetTab !== 'home') {
       setFromHome(true)
     }
-    // Determine slide direction
-    const fromIdx = TAB_ORDER.indexOf(tab)
-    const toIdx = TAB_ORDER.indexOf(targetTab)
-    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-      setSlideDir(toIdx > fromIdx ? 'right' : 'left')
-    }
     setTab(targetTab)
     setSubView(targetSub || null)
   }, [updateDaily, tab])
 
   const handleTabChange = useCallback((t) => {
-    const fromIdx = TAB_ORDER.indexOf(tab)
-    const toIdx = TAB_ORDER.indexOf(t)
-    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-      setSlideDir(toIdx > fromIdx ? 'right' : 'left')
-    }
     setTab(t)
     setSubView(null)
     setFromHome(false)
-  }, [tab])
+  }, [])
 
   // Swipe gesture handling
   const handleTouchStart = useCallback((e) => {
@@ -343,8 +334,7 @@ export default function App() {
   const checkInCount = countCheckIns(daily)
   const moodState = getMoodState(checkInCount)
 
-  // Slide animation class
-  const slideClass = slideDir === 'right' ? 'slide-right' : slideDir === 'left' ? 'slide-left' : ''
+  // Transitions use crossfade only now
 
   const renderTab = () => {
     switch (tab) {
@@ -357,28 +347,20 @@ export default function App() {
             onEventMessage={setEventMessage}
             onUpdate={updateDaily}
             onToast={showToast}
+            creatureReaction={creatureReaction}
             onCreatureReaction={handleCreatureReaction}
             onMilestone={handleMilestone}
             onOpenCrisis={() => setShowCrisis(true)}
           />
         )
-      case 'recovery':
+      case 'checkins':
         return (
-          <RecoveryTab
-            daily={daily}
-            onUpdate={updateDaily}
-            onOpenCrisis={() => setShowCrisis(true)}
-            initialSub={subView}
-            fromHome={fromHome}
-            onGoHome={goHome}
-          />
-        )
-      case 'body':
-        return (
-          <BodyTab
+          <CheckinsTab
             daily={daily}
             onUpdate={updateDaily}
             profile={profile}
+            onProfileUpdate={updateProfile}
+            onOpenCrisis={() => setShowCrisis(true)}
             initialSub={subView}
             fromHome={fromHome}
             onGoHome={goHome}
@@ -435,25 +417,11 @@ export default function App() {
         />
       )}
 
-      {/* Pet header — only on home tab */}
-      {tab === 'home' && (
-        <Pet
-          checkInCount={checkInCount}
-          creatureId={profile.creature}
-          creatureName={profile.creatureName}
-          streak={profile.streak || 0}
-          eventMessage={eventMessage}
-          onEventMessageShown={() => setEventMessage(null)}
-          reaction={creatureReaction}
-        />
-      )}
-
       {/* Tab content with slide transitions */}
       <div
         key={tab}
-        className={`tab-content ${slideClass}`}
+        className="tab-content"
         style={{ flex: 1, overflowY: tab === 'home' ? 'auto' : 'hidden', display: 'flex', flexDirection: 'column' }}
-        onAnimationEnd={() => setSlideDir(null)}
       >
         {renderTab()}
       </div>
@@ -474,6 +442,8 @@ export default function App() {
         crisisContacts={profile.crisisContacts || {}}
         safetyPlan={profile.safetyPlan || null}
         copingPlan={profile.copingPlan || null}
+        profile={profile}
+        daily={daily}
         onSaveCopingPlan={(plan) => updateProfile({ copingPlan: plan })}
       />
       <SettingsModal

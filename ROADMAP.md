@@ -11,7 +11,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-01. Emotion Identification Wheel (NEW — CRITICAL)
+### T1-01. Emotion Identification Wheel (NEW — CRITICAL) ✅ DONE
 
 **Why:** Diana is autistic. Alexithymia (difficulty identifying emotions) is extremely common in autistic people. Every piece of therapeutic work — DBT, recovery, relationship health — depends on her being able to name what she feels. This is the single most foundational missing piece.
 
@@ -34,7 +34,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-02. Behavioral Chain Analysis — Simplified (NEW — CRITICAL)
+### T1-02. Behavioral Chain Analysis — Simplified (NEW — CRITICAL) ✅ DONE
 
 **Why:** When Diana has an inner circle day, the therapeutic work is understanding the CHAIN of events that led there. This is the core tool for compulsive behavior treatment. Without it, she logs "I acted out" and learns nothing. With it, she starts seeing the pattern: vulnerability → trigger → thought → emotion → urge → behavior → consequence.
 
@@ -57,7 +57,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-03. Safety Plan — Stanley-Brown Model (NEW — CRITICAL)
+### T1-03. Safety Plan — Stanley-Brown Model (NEW — CRITICAL) ✅ DONE
 
 **Why:** The crisis toolkit gives her generic tools. A safety plan is *her own personalized clinical document.* Every therapist working with someone at this level of complexity should have a safety plan in place. The app should hold it.
 
@@ -77,7 +77,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-04. Window of Tolerance Check-in (NEW)
+### T1-04. Window of Tolerance Check-in (NEW) ✅ DONE
 
 **Why:** Diana's therapist is almost certainly working with a window of tolerance model. The zone between hyperarousal (panic, mania, rage, acting out) and hypoarousal (shutdown, dissociation, freeze, depression). The app doesn't help her identify where she IS right now, which is the prerequisite for choosing the right skill.
 
@@ -96,7 +96,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-05. Dissociation Tracking (NEW)
+### T1-05. Dissociation Tracking (NEW) ✅ DONE
 
 **Why:** Diana is autistic with trauma history, possibly schizoaffective. Dissociation is almost certainly part of her experience. It's also a common PRECURSOR to acting out — she dissociates and then engages in compulsive behavior to either extend the numbing or shock herself back into her body. Her therapist needs this data.
 
@@ -114,7 +114,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-06. Secrecy Test Integration (NEW)
+### T1-06. Secrecy Test Integration (NEW) ✅ DONE
 
 **Why:** This already exists in Diana's Three Circles document that Kael built — "If you wouldn't show this conversation to Luis, stop and contact Kael immediately." It's a powerful clinical tool. It should live in the app.
 
@@ -131,7 +131,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-07. Urge → Skill Recommendation Engine (from #3)
+### T1-07. Urge → Skill Recommendation Engine (from #3) ✅ DONE
 
 **Why:** Right now the urge logger records what happened. It needs to help her DO something. The single highest-impact feature change.
 
@@ -153,7 +153,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-08. "My Coping Plan" — Pre-Built by Diana (from #5)
+### T1-08. "My Coping Plan" — Pre-Built by Diana (from #5) ✅ DONE — setup UI built into CrisisToolkit CopingPlanSection
 
 **Why:** During a good day, she fills this out. During a bad day, it talks her through it in HER OWN words.
 
@@ -172,7 +172,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-09. Reorder Crisis Toolkit — Skills First, Contacts Last (from #1)
+### T1-09. Reorder Crisis Toolkit — Skills First, Contacts Last (from #1) ✅ DONE
 
 **Why:** The goal is self-sufficiency. She should reach for skills before reaching for people.
 
@@ -184,7 +184,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-10. Body-Self Connection Check-in (NEW)
+### T1-10. Body-Self Connection Check-in (NEW) ✅ DONE
 
 **Why:** Diana is trans. Her relationship with her body is complex and clinically significant. The app treats her body as a machine to monitor. But gender euphoria/dysphoria, feeling at home in herself — these fluctuate and affect everything else.
 
@@ -202,7 +202,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-11. Positive Connection & Relationship Tracking (NEW)
+### T1-11. Positive Connection & Relationship Tracking (NEW) ✅ DONE
 
 **Why:** Recovery isn't just the absence of bad behavior — it's the presence of healthy connection. The app tracks everything that goes wrong but nothing about what goes right relationally.
 
@@ -220,7 +220,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-12. Values Anchor — "Why I'm Doing This" (NEW)
+### T1-12. Values Anchor — "Why I'm Doing This" (NEW) ✅ DONE
 
 **Why:** On the hardest days, streaks don't matter and the creature doesn't help. What pulls her back is remembering WHY. The app has no "why."
 
@@ -237,7 +237,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-13. 24-Hour Urge Reflection (from #50)
+### T1-13. 24-Hour Urge Reflection (from #50) ✅ DONE
 
 **Why:** The real learning happens AFTER the moment, not during it. Building reflective capacity is the actual therapeutic work.
 
@@ -253,7 +253,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T1-14. Skill Effectiveness Tracking (from #6)
+### T1-14. Skill Effectiveness Tracking (from #6) ✅ DONE
 
 **Why:** Not every skill works for every person. Over time the app learns what actually helps Diana and recommends those first.
 
@@ -273,7 +273,7 @@ This document is a Claude Code implementation guide. Each item includes what to 
 
 ---
 
-### T2-01. Emotion Vocabulary Builder (extends T1-01)
+### T2-01. Emotion Vocabulary Builder (extends T1-01) ✅ DONE
 
 Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 - The word in large text
@@ -283,7 +283,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-02. Reading & Learning Tracker (from #8-12)
+### T2-02. Reading & Learning Tracker (from #8-12) ✅ DONE
 
 - "What did you read/listen to today?" + duration picker (5/10/15/30/60 min)
 - Tracks audiobooks, Kabbalah materials, anything
@@ -294,7 +294,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-03. Word of the Day Fixes (from #9-11, #38)
+### T2-03. Word of the Day Fixes (from #9-11, #38) ✅ DONE
 
 - Fix localStorage direct access in HomeTab.jsx line 74 — use storage utility
 - Words she skips come back sooner; learned words cycle out
@@ -304,7 +304,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-04. Custom Trackers — "My Trackers" (from #15-20)
+### T2-04. Custom Trackers — "My Trackers" (from #15-20) ✅ DONE
 
 - User-defined yes/no daily items: "Did I shower?" "Did I eat 3 meals?" "Did I leave the house?"
 - Pre-built templates: Self-care basics, Eating, Social, Household — she picks which
@@ -315,7 +315,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-05. Meal Tracking — Simple (from #47)
+### T2-05. Meal Tracking — Simple (from #47) ✅ DONE
 
 - Three taps: Breakfast ✅ / Lunch ✅ / Dinner ✅
 - Not calorie counting. Just "did I eat."
@@ -324,7 +324,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-06. Daily Schedule — Editable Time Blocks (from #21-24)
+### T2-06. Daily Schedule — Editable Time Blocks (from #21-24) ✅ DONE
 
 - Visual timeline with blocks: Wake up, Morning meds, Training session, Therapy, Luis home, Dinner, Evening meds, Bedtime
 - Tap to edit, long-press or arrows to reorder
@@ -334,7 +334,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-07. Luis Context Awareness (from #25, T1-11)
+### T2-07. Luis Context Awareness (from #25, T1-11) ✅ DONE
 
 - Simple toggle in profile: Luis's shift schedule (Thu-Sun)
 - Home screen shows "Luis is at work today" or "Luis is home today"
@@ -343,7 +343,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-08. "Wins" Journal — Positive Experience Accumulation (from #48)
+### T2-08. "Wins" Journal — Positive Experience Accumulation (from #48) ✅ DONE
 
 - Daily prompt: "What's one thing that was good today?" — voice-to-text, one line
 - DBT's "Accumulate Positive Experiences" as a feature
@@ -353,7 +353,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-09. Goal Tracker with Micro-Steps (from #49)
+### T2-09. Goal Tracker with Micro-Steps (from #49) ✅ DONE
 
 - Diana sets 1-3 goals: "Get Artemis PSD certified" / "Read one whole book" / "30 days outer circle"
 - Break into visible steps
@@ -363,7 +363,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-10. "Kael's Voice" Library (from #4, #7)
+### T2-10. "Kael's Voice" Library (from #4, #7) ✅ DONE
 
 - Pre-loaded written messages or phrases Kael would say
 - Rotating display: "What's the next right thing?" / "You already know what to do. Slow down and find it." / "I'm proud of you for being here."
@@ -373,7 +373,7 @@ Expand the emotion wheel into a literacy tool. Each emotion she selects shows:
 
 ---
 
-### T2-11. Sleep Hygiene Support — Not Just Tracking (from therapist notes)
+### T2-11. Sleep Hygiene Support — Not Just Tracking (from therapist notes) ✅ DONE
 
 - After sleep check-in, if quality is poor, show one rotating sleep hygiene tip:
   - "Screens off 30 minutes before bed"
@@ -483,10 +483,10 @@ data. Reference actual numbers.
 
 ---
 
-### T4-01. Fix meds streak calculation (from #42)
+### T4-01. Fix meds streak calculation (from #42) ✅ DONE
 `profile?.medStreak` is referenced but never computed. Calculate from daily data on each meds update.
 
-### T4-02. Fix Word of the Day localStorage direct access (from #38)
+### T4-02. Fix Word of the Day localStorage direct access (from #38) ✅ DONE — all localStorage access now routes through storage utility
 HomeTab.jsx line 74 uses `localStorage.getItem` directly. Route through storage utility.
 
 ### T4-03. Fix puppy skill rotation algorithm (from #40)
@@ -519,40 +519,40 @@ Add as a distinct option in the "What did you do?" section of urge logging.
 
 If building incrementally, here's the sequence:
 
-**Sprint 1 — Therapeutic Core (1-2 weeks):**
-- T1-01 Emotion wheel
-- T1-03 Safety plan
-- T1-06 Secrecy test
-- T1-07 Urge → skill recommendations
-- T1-09 Reorder crisis toolkit
-- T4-01 Fix meds streak
-- T4-02 Fix localStorage bypass
+**Sprint 1 — Therapeutic Core (1-2 weeks): ✅ COMPLETE**
+- ✅ T1-01 Emotion wheel
+- ✅ T1-03 Safety plan
+- ✅ T1-06 Secrecy test
+- ✅ T1-07 Urge → skill recommendations
+- ✅ T1-09 Reorder crisis toolkit
+- ✅ T4-01 Fix meds streak
+- ✅ T4-02 Fix localStorage bypass
 
-**Sprint 2 — Deeper Recovery Tools (1-2 weeks):**
-- T1-02 Chain analysis (simplified)
-- T1-04 Window of tolerance
-- T1-05 Dissociation tracking
-- T1-08 Coping plan
-- T1-10 Body-self connection
-- T1-13 24-hour urge reflection
+**Sprint 2 — Deeper Recovery Tools (1-2 weeks): ✅ COMPLETE**
+- ✅ T1-02 Chain analysis (simplified)
+- ✅ T1-04 Window of tolerance
+- ✅ T1-05 Dissociation tracking
+- ✅ T1-08 Coping plan
+- ✅ T1-10 Body-self connection
+- ✅ T1-13 24-hour urge reflection
 
-**Sprint 3 — Life Building (1-2 weeks):**
-- T1-11 Relationship/connection tracking
-- T1-12 Values anchor
-- T1-14 Skill effectiveness tracking
-- T2-02 Reading tracker
-- T2-04 Custom trackers
-- T2-05 Meal tracking
-- T2-08 Wins journal
+**Sprint 3 — Life Building (1-2 weeks): ✅ COMPLETE**
+- ✅ T1-11 Relationship/connection tracking
+- ✅ T1-12 Values anchor
+- ✅ T1-14 Skill effectiveness tracking
+- ✅ T2-02 Reading tracker
+- ✅ T2-04 Custom trackers
+- ✅ T2-05 Meal tracking
+- ✅ T2-08 Wins journal
 
-**Sprint 4 — Structure & Self-Sufficiency (1-2 weeks):**
-- T2-01 Emotion vocabulary builder
-- T2-03 Word of the Day fixes
-- T2-06 Daily schedule
-- T2-07 Luis context
-- T2-09 Goal tracker
-- T2-10 Kael's voice library
-- T2-11 Sleep hygiene support
+**Sprint 4 — Structure & Self-Sufficiency (1-2 weeks): ✅ COMPLETE**
+- ✅ T2-01 Emotion vocabulary builder
+- ✅ T2-03 Word of the Day fixes
+- ✅ T2-06 Daily schedule
+- ✅ T2-07 Luis context
+- ✅ T2-09 Goal tracker
+- ✅ T2-10 Kael's voice library
+- ✅ T2-11 Sleep hygiene support
 
 **Sprint 5 — Intelligence Layer:**
 - T3-01 AI insights (Netlify Function)

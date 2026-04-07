@@ -18,10 +18,15 @@ export function countCheckIns(daily) {
   if (daily.window !== undefined && daily.window !== null) n++
   if (daily.dissociation !== undefined && daily.dissociation !== null) n++
   if (daily.bodySelf) n++
+  if (daily.connection) n++
+  if (daily.meals && (daily.meals.breakfast || daily.meals.lunch || daily.meals.dinner)) n++
+  if (daily.win) n++
+  if (daily.reading?.minutes) n++
+  if (daily.wordOfDay?.learned) n++
   return n
 }
 
-export const TOTAL_CHECKINS = 13
+export const TOTAL_CHECKINS = 18
 
 // Returns 'sleeping' | 'bounce' | 'wiggle' | 'glow'
 export function getMoodState(checkInCount) {
@@ -42,8 +47,8 @@ export const MOOD_MESSAGES = {
 export const MILESTONES = [
   { threshold: 3, message: "We're getting started! 🌱", reaction: 'bounce' },
   { threshold: 7, message: "More than halfway! 💪", reaction: 'wiggle' },
-  { threshold: 10, message: "Almost there! ✨", reaction: 'celebrate' },
-  { threshold: 13, message: "FULL DAY! You showed up completely! 🌟🎉", reaction: 'celebrate' },
+  { threshold: 12, message: "Almost there! ✨", reaction: 'celebrate' },
+  { threshold: 18, message: "FULL DAY! You showed up completely! 🌟🎉", reaction: 'celebrate' },
 ]
 
 export function checkMilestone(prevCount, newCount) {
@@ -63,6 +68,10 @@ export const CREATURE_REACTIONS = {
   energy: { animation: 'creature-meditate', duration: 800, emoji: '⚡' },
   circles: { animation: 'creature-celebrate', duration: 1000, emoji: '⭕' },
   feelings: { animation: 'creature-meditate', duration: 800, emoji: '🎭' },
+  connection: { animation: 'creature-celebrate', duration: 800, emoji: '💜' },
+  meals: { animation: 'creature-celebrate', duration: 800, emoji: '🍽️' },
+  win: { animation: 'creature-celebrate', duration: 1000, emoji: '🌟' },
+  reading: { animation: 'creature-meditate', duration: 800, emoji: '📚' },
 }
 
 // Compute consecutive days of meds taken (streak)

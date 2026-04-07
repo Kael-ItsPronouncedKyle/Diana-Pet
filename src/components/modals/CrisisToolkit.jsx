@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { CRISIS_PRESENTATION_WARNING } from '../../constants/clinicalConfig.js'
+import ValuesAnchor from '../shared/ValuesAnchor.jsx'
+import KaelVoiceLibrary from '../shared/KaelVoiceLibrary.jsx'
 
-// Simplified: 4 categories instead of 8
-const SECTIONS = ['quick-calm', 'safety-plan', 'coping-skills', 'contacts']
+// Simplified: 6 categories including Letter from Me and Words from Kael
+const SECTIONS = ['quick-calm', 'safety-plan', 'coping-skills', 'letter', 'kael', 'contacts']
 const SECTION_LABELS = {
   'quick-calm': '🌱 Quick Calm',
   'safety-plan': '🛡️ My Safety Plan',
   'coping-skills': '💪 Coping Skills',
+  'letter': '💌 Letter from Me',
+  'kael': '💚 Words from Kael',
   contacts: '📞 Call Someone',
 }
 
@@ -194,7 +198,7 @@ function CopingPlanSection({ copingPlan, onSave }) {
   )
 }
 
-export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, safetyPlan = null, copingPlan = null, onSaveCopingPlan }) {
+export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, safetyPlan = null, copingPlan = null, onSaveCopingPlan, profile = null, daily = null }) {
   const [activeSection, setActiveSection] = useState('quick-calm')
 
   if (!isOpen) return null
@@ -296,6 +300,10 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
             </div>
           </div>
         )
+      case 'letter':
+        return <ValuesAnchor profile={profile} mode="display" />
+      case 'kael':
+        return <KaelVoiceLibrary profile={profile} daily={daily} compact={true} />
       case 'contacts':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -412,18 +420,28 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
 
 // Floating button that lives outside the sheet
 export function CrisisButton({ onClick }) {
+  // Check if nighttime (9pm-4am) for subtle glow
+  const hour = new Date().getHours()
+  const isNight = hour >= 21 || hour < 4
+
   return (
     <button
       onClick={onClick}
       aria-label="Open crisis toolkit"
       style={{
-        position: 'fixed', top: 16, right: 16, zIndex: 900,
-        width: 44, height: 44, borderRadius: '50%',
-        background: 'var(--card, white)', border: '2px solid #FDECEC',
+        position: 'fixed',
+        bottom: `calc(68px + env(safe-area-inset-bottom))`,
+        right: 16,
+        zIndex: 900,
+        width: 48, height: 48, borderRadius: '50%',
+        background: isNight ? '#3D2020' : 'var(--card, white)',
+        border: `2px solid ${isNight ? '#E87B7B' : '#FDECEC'}`,
         fontSize: 22, cursor: 'pointer',
-        boxShadow: '0 2px 12px rgba(232,123,123,0.25)',
+        boxShadow: isNight
+          ? '0 0 16px rgba(232,123,123,0.4), 0 2px 8px rgba(232,123,123,0.2)'
+          : '0 2px 12px rgba(232,123,123,0.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'transform 0.15s',
+        transition: 'transform 0.15s, box-shadow 1s, background 1s',
       }}
       onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
       onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}

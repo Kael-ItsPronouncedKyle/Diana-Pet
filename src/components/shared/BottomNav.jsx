@@ -1,9 +1,8 @@
 const TABS = [
   { id: 'home', emoji: '🏠', label: 'Home' },
-  { id: 'recovery', emoji: '💚', label: 'Recovery' },
-  { id: 'body', emoji: '💧', label: 'Body' },
+  { id: 'checkins', emoji: '📋', label: 'Check-ins' },
   { id: 'puppies', emoji: '🐾', label: 'Puppies' },
-  { id: 'week', emoji: '📊', label: 'Week' },
+  { id: 'week', emoji: '📅', label: 'My Week' },
 ]
 
 export default function BottomNav({ activeTab, onTabChange }) {

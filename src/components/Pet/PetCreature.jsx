@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CREATURES } from '../../constants/creatures.js'
+import SVGCreature from './SVGCreature'
 
 const SPARKLE_COLORS = ['#F0C050', '#E8907E', '#FFD700', '#6BBF8A', '#6BA8D6', '#E87B7B']
 
@@ -30,48 +30,19 @@ function SparkleParticles() {
 }
 
 export default function PetCreature({ creatureId, moodState, size = 90, streak = 0, reaction = null, compact = false }) {
-  const creature = useMemo(
-    () => CREATURES.find(c => c.id === creatureId) || CREATURES[0],
-    [creatureId]
-  )
-
-  const animStyle = useMemo(() => {
-    // Reaction animations override mood animation temporarily
-    if (reaction) {
-      return { animation: `${reaction} 0.8s ease-in-out` }
-    }
-    switch (moodState) {
-      case 'sleeping':
-        return { animation: 'sleepy 3s ease-in-out infinite', opacity: 0.55 }
-      case 'bounce':
-        return { animation: 'bounce 1.2s ease-in-out infinite' }
-      case 'wiggle':
-        return { animation: 'wiggle 1.4s ease-in-out infinite' }
-      case 'glow':
-        return { animation: 'glow 2s ease-in-out infinite, wiggle 1.8s ease-in-out infinite' }
-      default:
-        return {}
-    }
-  }, [moodState, reaction])
-
-  const showSparkles = moodState === 'glow' && !compact
+  const showSparkles = useMemo(() => moodState === 'glow' && !compact, [moodState, compact])
 
   // Compact mode for mini-pet on non-home tabs
   if (compact) {
     return (
       <div style={{
-        width: size, height: size,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        animation: 'mini-pet-idle 2s ease-in-out infinite',
+        width: size,
+        height: size,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
-        <div style={{
-          fontSize: size * 0.7,
-          lineHeight: 1,
-          userSelect: 'none',
-          ...animStyle,
-        }}>
-          {creature.emoji}
-        </div>
+        <SVGCreature creatureId={creatureId} moodState={moodState} size={size * 0.7} reaction={reaction} />
       </div>
     )
   }
@@ -82,19 +53,7 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
       {showSparkles && <SparkleParticles />}
 
       {/* The creature itself */}
-      <div
-        style={{
-          fontSize: size,
-          lineHeight: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          userSelect: 'none',
-          ...animStyle,
-        }}
-      >
-        {creature.emoji}
-      </div>
+      <SVGCreature creatureId={creatureId} moodState={moodState} size={size} reaction={reaction} />
 
       {/* Sleeping ZZZ indicator */}
       {moodState === 'sleeping' && (

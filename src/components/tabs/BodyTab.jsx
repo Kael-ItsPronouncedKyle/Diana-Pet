@@ -4,6 +4,8 @@ import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 import TopNav from '../shared/TopNav.jsx'
 import { detectTripleRisk } from '../../constants/clinicalConfig.js'
+import MealSection from '../checkins/MealSection.jsx'
+import { SLEEP_TIPS, WIND_DOWN_CHECKLIST } from '../../constants/sleepHygiene.js'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -97,6 +99,19 @@ function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
           Save sleep ✓
         </button>
       </div>
+      {/* T2-11: Sleep hygiene tip — shows after save if sleep was poor */}
+      {saved && quality && quality <= 3 && SLEEP_TIPS.length > 0 && (() => {
+        const tipIdx = new Date().getDate() % SLEEP_TIPS.length
+        const tip = SLEEP_TIPS[tipIdx]
+        return (
+          <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.blue, marginBottom: 6 }}>💡 Sleep tip</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, lineHeight: 1.5 }}>
+              {tip.emoji} {tip.tip}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -851,6 +866,7 @@ function ClinicalCheckIns({ daily, onUpdate }) {
 const SUBS = [
   { key: 'sleep', label: '💤 Sleep' },
   { key: 'meds', label: '💊 Meds' },
+  { key: 'meals', label: '🍽️ Meals' },
   { key: 'energy', label: '⚡ Energy' },
   { key: 'water', label: '💧 Water' },
   { key: 'window', label: '🧠 Window' },
@@ -861,22 +877,26 @@ const SUBS = [
   { key: 'more', label: '+ More' },
 ]
 
-export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome, onGoHome }) {
+export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome, onGoHome, focusMode }) {
   const [sub, setSub] = useState(initialSub || 'sleep')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px' }}>
         <TopNav onGoHome={onGoHome} />
       </div>
-      <div style={{ overflowX: 'auto', padding: '10px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', display: 'flex', gap: 8, scrollbarWidth: 'none' }}>
-        {SUBS.map(s => (
-          <button key={s.key} onClick={() => setSub(s.key)} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', whiteSpace: 'nowrap', background: sub === s.key ? C.primary : '#F0E8E0', color: sub === s.key ? 'white' : C.text, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* Sub-tab bar — hidden in focus mode */}
+      {!focusMode && (
+        <div style={{ overflowX: 'auto', padding: '10px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', display: 'flex', gap: 8, scrollbarWidth: 'none' }}>
+          {SUBS.map(s => (
+            <button key={s.key} onClick={() => setSub(s.key)} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', whiteSpace: 'nowrap', background: sub === s.key ? C.primary : '#F0E8E0', color: sub === s.key ? 'white' : C.text, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {sub === 'sleep' && <SleepSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'meals' && <MealSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'meds' && <MedsSection daily={daily} onUpdate={onUpdate} profile={profile} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'energy' && <EnergySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'water' && <WaterSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}

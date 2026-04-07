@@ -163,7 +163,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   const handleDismissSafetyBanner = () => {
     setSafetyBannerDismissed(true)
     setShowSafetyBanner(false)
-    onNavigate('__updateDaily', { safetyBannerDismissed: true })
+    onUpdate({ safetyBannerDismissed: true })
   }
 
   // ─── Engagement Dropout Banner ──────────────────────────────────────
@@ -191,7 +191,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
 
   const handleDismissDropoutBanner = () => {
     setShowDropoutBanner(false)
-    onNavigate('__updateDaily', { dropoutBannerSeen: true })
+    onUpdate({ dropoutBannerSeen: true })
   }
 
   // Determine next action
@@ -227,7 +227,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
     if (item.quickAction === 'water') {
       const prevCount = daily?.water?.count || 0
       const count = prevCount + 1
-      onNavigate('__updateDaily', { water: { count: Math.min(8, count) } })
+      onUpdate({ water: { count: Math.min(8, count) } })
       onToast?.(`💧 ${Math.min(8, count)}/8 glasses`)
       setUndoAction({ type: 'water', prev: prevCount })
       setTimeout(() => setUndoAction(null), 5000)
@@ -235,7 +235,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
       const hour = new Date().getHours()
       const field = hour < 17 ? 'morning' : 'evening'
       const prevMeds = { ...(daily?.meds || {}) }
-      onNavigate('__updateDaily', { meds: { ...prevMeds, [field]: true } })
+      onUpdate({ meds: { ...prevMeds, [field]: true } })
       onToast?.('💊 Meds logged!')
       setUndoAction({ type: 'meds', field, prev: prevMeds })
       setTimeout(() => setUndoAction(null), 5000)
@@ -245,10 +245,10 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   const handleUndo = () => {
     if (!undoAction) return
     if (undoAction.type === 'water') {
-      onNavigate('__updateDaily', { water: { count: undoAction.prev } })
+      onUpdate({ water: { count: undoAction.prev } })
       onToast?.('💧 Undone')
     } else if (undoAction.type === 'meds') {
-      onNavigate('__updateDaily', { meds: undoAction.prev })
+      onUpdate({ meds: undoAction.prev })
       onToast?.('💊 Undone')
     }
     setUndoAction(null)
@@ -370,7 +370,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
       setWordProgress(progress)
 
       // Mark daily task as complete
-      onNavigate('__updateDaily', { wordOfDay: { learned: true, sentence: practiceInput } })
+      onUpdate({ wordOfDay: { learned: true, sentence: practiceInput } })
 
       onToast?.('📖 Great word! Keep using it!')
     } catch (e) {
@@ -380,7 +380,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
 
   const handleSavePractice = () => {
     try {
-      onNavigate('__updateDaily', { wordOfDay: { sentence: practiceInput } })
+      onUpdate({ wordOfDay: { sentence: practiceInput } })
       onToast?.('💭 Practice saved!')
     } catch (e) {
       console.error('Failed to save practice:', e)

@@ -50,9 +50,14 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState(null)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [creatureReaction, setCreatureReaction] = useState(null)
-  // Slide transitions removed — using crossfade only
   const [darkMode, setDarkMode] = useState(false)
-  const [breathingDone, setBreathingDone] = useState(false)
+
+  // Refs for avoiding stale closures
+  const profileRef = useRef(profile)
+  const pendingEffectsRef = useRef(null)
+
+  // Keep profileRef in sync
+  useEffect(() => { profileRef.current = profile }, [profile])
 
   // Swipe state
   const touchStartRef = useRef(null)
@@ -153,63 +158,78 @@ export default function App() {
 
   const updateDaily = useCallback((patch) => {
     setDaily(prev => {
-      const prevCount = countCheckIns(prev)
       const next = { ...prev, ...patch }
-      storage.set(getDailyKey(), next)
-
-      // Fire event messages for key milestones
-      if (patch.circles?.choice && !prev.circles?.choice) {
-        const msg = EVENT_MESSAGES[`circles_${patch.circles.choice}`]
-        if (msg) setEventMessage(msg)
-      }
-      if (patch.meds?.morning === true && !prev.meds?.morning) setEventMessage(EVENT_MESSAGES.meds_morning)
-      if (patch.meds?.evening === true && !prev.meds?.evening) setEventMessage(EVENT_MESSAGES.meds_evening)
-      if (patch.water?.count >= 8 && (prev.water?.count || 0) < 8) setEventMessage(EVENT_MESSAGES.water_goal)
-      if (patch.dbt?.practiced && !prev.dbt?.practiced) setEventMessage(EVENT_MESSAGES.dbt_practiced)
-      if (patch.urges && patch.urges.length > (prev.urges?.length || 0)) setEventMessage(EVENT_MESSAGES.urge_logged)
-      if (patch.energy !== undefined && patch.energy <= 2 && prev.energy === undefined) setEventMessage(EVENT_MESSAGES.energy_crashed)
-      if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) setEventMessage(EVENT_MESSAGES.energy_great)
-      if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) setEventMessage(EVENT_MESSAGES.sleep_bad)
-
-      // Compute meds streak
-      if (patch.meds && (patch.meds.morning === true || patch.meds.evening === true)) {
-        computeMedStreak(next).then(streak => {
-          if (streak !== undefined) updateProfile({ medStreak: streak })
-        })
-      }
-
-      // Update streak if first check-in today
-      const hadAny = prevCount > 0
-      const hasNow = countCheckIns(next) > 0
-      if (!hadAny && hasNow && profile) {
-        updateStreak(profile)
-      }
-
-      // Check milestones
-      const newCount = countCheckIns(next)
-      const milestone = checkMilestone(prevCount, newCount)
-      if (milestone) {
-        setTimeout(() => {
-          setEventMessage(milestone.message)
-          if (milestone.reaction === 'celebrate') {
-            setConfettiTrigger(t => t + 1)
-            celebrationFeedback()
-          } else {
-            milestoneFeedback()
-          }
-        }, 300)
-      }
-
-      // Creature reaction — detect what changed
-      const reactionKey = detectReactionKey(prev, patch)
-      if (reactionKey && CREATURE_REACTIONS[reactionKey]) {
-        setCreatureReaction(CREATURE_REACTIONS[reactionKey].animation)
-        setTimeout(() => setCreatureReaction(null), CREATURE_REACTIONS[reactionKey].duration)
-      }
-
+      // Store prev state for side effects (run outside updater)
+      pendingEffectsRef.current = { prev, next, patch }
       return next
     })
-  }, [profile, updateStreak, updateProfile])
+  }, [])
+
+  // Side effects that run AFTER setDaily commits — safe in React 18 StrictMode
+  useEffect(() => {
+    const pending = pendingEffectsRef.current
+    if (!pending) return
+    pendingEffectsRef.current = null
+
+    const { prev, next, patch } = pending
+    const prevCount = countCheckIns(prev)
+
+    // Persist to storage
+    storage.set(getDailyKey(), next)
+
+    // Determine the most important event message (priority order: milestone > circles > meds > other)
+    let message = null
+    if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) message = EVENT_MESSAGES.sleep_bad
+    if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) message = EVENT_MESSAGES.energy_great
+    if (patch.energy !== undefined && patch.energy <= 2 && prev.energy === undefined) message = EVENT_MESSAGES.energy_crashed
+    if (patch.urges && patch.urges.length > (prev.urges?.length || 0)) message = EVENT_MESSAGES.urge_logged
+    if (patch.dbt?.practiced && !prev.dbt?.practiced) message = EVENT_MESSAGES.dbt_practiced
+    if (patch.water?.count >= 8 && (prev.water?.count || 0) < 8) message = EVENT_MESSAGES.water_goal
+    if (patch.meds?.evening === true && !prev.meds?.evening) message = EVENT_MESSAGES.meds_evening
+    if (patch.meds?.morning === true && !prev.meds?.morning) message = EVENT_MESSAGES.meds_morning
+    if (patch.circles?.choice && !prev.circles?.choice) {
+      const msg = EVENT_MESSAGES[`circles_${patch.circles.choice}`]
+      if (msg) message = msg
+    }
+
+    // Compute meds streak
+    if (patch.meds && (patch.meds.morning === true || patch.meds.evening === true)) {
+      computeMedStreak(next).then(streak => {
+        if (streak !== undefined) updateProfile({ medStreak: streak })
+      })
+    }
+
+    // Update streak if first check-in today
+    const hadAny = prevCount > 0
+    const hasNow = countCheckIns(next) > 0
+    if (!hadAny && hasNow && profileRef.current) {
+      updateStreak(profileRef.current)
+    }
+
+    // Check milestones — milestones override event messages
+    const newCount = countCheckIns(next)
+    const milestone = checkMilestone(prevCount, newCount)
+    if (milestone) {
+      setTimeout(() => {
+        setEventMessage(milestone.message)
+        if (milestone.reaction === 'celebrate') {
+          setConfettiTrigger(t => t + 1)
+          celebrationFeedback()
+        } else {
+          milestoneFeedback()
+        }
+      }, 300)
+    } else if (message) {
+      setEventMessage(message)
+    }
+
+    // Creature reaction — detect what changed
+    const reactionKey = detectReactionKey(prev, patch)
+    if (reactionKey && CREATURE_REACTIONS[reactionKey]) {
+      setCreatureReaction(CREATURE_REACTIONS[reactionKey].animation)
+      setTimeout(() => setCreatureReaction(null), CREATURE_REACTIONS[reactionKey].duration)
+    }
+  }, [daily, updateStreak, updateProfile])
 
   // Detect which check-in was just completed
   function detectReactionKey(prev, patch) {
@@ -230,20 +250,16 @@ export default function App() {
 
   const goHome = useCallback(() => {
     handleTabChange('home')
-  }, [])
+  }, [handleTabChange])
 
   // Navigation handler
   const handleNavigate = useCallback((targetTab, targetSub) => {
-    if (targetTab === '__updateDaily') {
-      updateDaily(targetSub)
-      return
-    }
     if (tab === 'home' && targetTab !== 'home') {
       setFromHome(true)
     }
     setTab(targetTab)
     setSubView(targetSub || null)
-  }, [updateDaily, tab])
+  }, [tab])
 
   const handleTabChange = useCallback((t) => {
     setTab(t)

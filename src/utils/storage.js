@@ -119,14 +119,6 @@ function resolveTable(key) {
   return { table: 'app_data', keyField: 'key', keyValue: key }
 }
 
-// Get the current user ID from Supabase auth
-function getUserId() {
-  if (!supabase) return null
-  const session = supabase.auth.session?.()
-  // supabase-js v2 uses getSession
-  return null // Will be set via setUserId after auth
-}
-
 let _userId = null
 
 const storage = {

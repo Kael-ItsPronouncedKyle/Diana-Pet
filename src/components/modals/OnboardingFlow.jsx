@@ -304,7 +304,7 @@ export default function OnboardingFlow({ onComplete }) {
           justifyContent: 'center',
           border: '2px solid #E8F4F1',
         }}>
-          <div style={{ minHeight: 60, display: 'flex', alignItems: 'center' }}>
+          <div style={{ minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             {lines.map((line, i) => (
               <div
                 key={i}

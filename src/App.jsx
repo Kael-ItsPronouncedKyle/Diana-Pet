@@ -136,10 +136,11 @@ export default function App() {
     await storage.set('diana-profile', p)
   }, [])
 
-  const updateProfile = useCallback(async (patch) => {
+  const updateProfile = useCallback((patch) => {
     setProfile(prev => {
       const next = { ...prev, ...patch }
-      storage.set('diana-profile', next)
+      // Persist outside updater to properly await async encryption
+      storage.set('diana-profile', next).catch(() => {})
       return next
     })
   }, [])
@@ -174,8 +175,9 @@ export default function App() {
     const { prev, next, patch } = pending
     const prevCount = countCheckIns(prev)
 
-    // Persist to storage
-    storage.set(getDailyKey(), next)
+    // Persist to storage — await encryption before continuing
+    ;(async () => {
+    await storage.set(getDailyKey(), next)
 
     // Determine the most important event message (priority order: milestone > circles > meds > other)
     let message = null
@@ -229,6 +231,7 @@ export default function App() {
       setCreatureReaction(CREATURE_REACTIONS[reactionKey].animation)
       setTimeout(() => setCreatureReaction(null), CREATURE_REACTIONS[reactionKey].duration)
     }
+    })()
   }, [daily, updateStreak, updateProfile])
 
   // Detect which check-in was just completed

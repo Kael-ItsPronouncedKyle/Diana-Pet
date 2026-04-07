@@ -257,13 +257,13 @@ export const PATTERN_DYSPHORIA_SPIKE = {
   autoSurfaceSafetyPlan: false,
   detect: (weekData) => {
     const days = Object.values(weekData).filter(Boolean)
-    // bodySelf === false = dysphoric day (not connected to body/self)
-    const dysphoricDays = days.filter(d => d.bodySelf === false).length
+    // bodySelf === 'dysphoric' or 'disconnected' = hard body day
+    const dysphoricDays = days.filter(d => d.bodySelf === 'dysphoric' || d.bodySelf === 'disconnected').length
     return dysphoricDays >= 3
   },
   message: (weekData) => {
     const days = Object.values(weekData).filter(Boolean)
-    const count = days.filter(d => d.bodySelf === false).length
+    const count = days.filter(d => d.bodySelf === 'dysphoric' || d.bodySelf === 'disconnected').length
     return `${count} hard days with your body this week. ` +
       "Body disconnection is real and exhausting. " +
       "You showed up anyway. That matters. 💜"

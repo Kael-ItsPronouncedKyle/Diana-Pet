@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { DBT_SKILLS } from '../../constants/dbt.js'
 import { EMOTION_QUADRANTS } from '../../constants/emotions.js'
 import { CONTEXT_SKILL_MAP } from '../../constants/skillMap.js'
@@ -1144,19 +1144,35 @@ function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
   const [feeling, setFeeling] = useState(daily?.urgeReflection?.feeling || null)
   const [whatDifferently, setWhatDifferently] = useState(daily?.urgeReflection?.whatDifferently || '')
   const [saved, setSaved] = useState(!!daily?.urgeReflection?.feeling)
+  const [yesterdayUrges, setYesterdayUrges] = useState([])
 
-  // Check if there's an urge from ~24h ago (20-28h window)
+  // Load yesterday's urges on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const yest = new Date()
+        yest.setDate(yest.getDate() - 1)
+        const yKey = `diana-daily:${yest.toISOString().slice(0, 10)}`
+        const yData = await storage.get(yKey)
+        if (yData?.urges?.length > 0) {
+          setYesterdayUrges(yData.urges)
+        }
+      } catch (e) {
+        // silently skip
+      }
+    })()
+  }, [])
+
+  // Check for an urge from ~24h ago — from today's or yesterday's data
   const urgeToReflect = useMemo(() => {
-    const urges = daily?.urges || []
-    // Also check yesterday's data — but we only have today's daily
-    // So check urges from earlier today that are old enough, or rely on timestamps
+    const allUrges = [...(daily?.urges || []), ...yesterdayUrges]
     const now = Date.now()
-    return urges.find(u => {
+    return allUrges.find(u => {
       const age = now - u.timestamp
       const hours = age / (1000 * 60 * 60)
-      return hours >= 20 && hours <= 28
+      return hours >= 16 && hours <= 32
     })
-  }, [daily?.urges])
+  }, [daily?.urges, yesterdayUrges])
 
   if (!urgeToReflect || saved) return null
 

@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import storage from './utils/storage.js'
-import { today, getDailyKey } from './utils/dates.js'
-import { countCheckIns, computeMedStreak } from './utils/checkIns.js'
+import { today, getDailyKey, getTimeOfDay } from './utils/dates.js'
+import { countCheckIns, computeMedStreak, getMoodState, checkMilestone, CREATURE_REACTIONS } from './utils/checkIns.js'
 import { supabase, supabaseEnabled } from './lib/supabase.js'
+import { setHapticsEnabled, milestoneFeedback, celebrationFeedback } from './utils/haptics.js'
 
 import Pet from './components/Pet/Pet.jsx'
+import { MiniPet } from './components/Pet/Pet.jsx'
 import BottomNav from './components/shared/BottomNav.jsx'
+import Toast from './components/shared/Toast.jsx'
+import Confetti from './components/shared/Confetti.jsx'
 import OnboardingFlow from './components/modals/OnboardingFlow.jsx'
 import AuthModal from './components/modals/AuthModal.jsx'
 import CrisisToolkit, { CrisisButton } from './components/modals/CrisisToolkit.jsx'
@@ -31,9 +35,11 @@ const EVENT_MESSAGES = {
   energy_great: "Great energy day! You're doing amazing. 🌟",
 }
 
+const TAB_ORDER = ['home', 'recovery', 'body', 'puppies', 'week']
+
 export default function App() {
   const [loading, setLoading] = useState(true)
-  const [authReady, setAuthReady] = useState(!supabaseEnabled) // skip auth if no Supabase
+  const [authReady, setAuthReady] = useState(!supabaseEnabled)
   const [authed, setAuthed] = useState(!supabaseEnabled)
   const [profile, setProfile] = useState(null)
   const [daily, setDaily] = useState({})
@@ -43,11 +49,40 @@ export default function App() {
   const [showCrisis, setShowCrisis] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [eventMessage, setEventMessage] = useState(null)
+  const [toastMsg, setToastMsg] = useState(null)
+  const [confettiTrigger, setConfettiTrigger] = useState(0)
+  const [creatureReaction, setCreatureReaction] = useState(null)
+  const [slideDir, setSlideDir] = useState(null) // 'left' | 'right' | null
+  const [darkMode, setDarkMode] = useState(false)
+  const [breathingDone, setBreathingDone] = useState(false)
 
-  // Auth state listener — onAuthStateChange is set up FIRST because in
-  // Supabase v2 it fires INITIAL_SESSION which processes the OAuth hash
-  // fragment (#access_token=...). getSession() does NOT process the hash,
-  // so calling it first caused a race condition where authed stayed false.
+  // Swipe state
+  const touchStartRef = useRef(null)
+
+  // Dark mode — auto-detect evening or use stored preference
+  useEffect(() => {
+    ;(async () => {
+      const stored = await storage.get('diana-dark-mode')
+      if (stored === 'on') setDarkMode(true)
+      else if (stored === 'off') setDarkMode(false)
+      else setDarkMode(getTimeOfDay() === 'evening')
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (darkMode) document.documentElement.classList.add('dark-mode')
+    else document.documentElement.classList.remove('dark-mode')
+  }, [darkMode])
+
+  // Haptics preference
+  useEffect(() => {
+    ;(async () => {
+      const pref = await storage.get('diana-haptics')
+      if (pref === false) setHapticsEnabled(false)
+    })()
+  }, [])
+
+  // Auth state listener
   useEffect(() => {
     if (!supabaseEnabled || !supabase) {
       setAuthReady(true)
@@ -71,7 +106,6 @@ export default function App() {
       }
     )
 
-    // Safety fallback: unblock UI if onAuthStateChange never fires
     const timeout = setTimeout(() => {
       setAuthReady(true)
     }, 5000)
@@ -82,7 +116,7 @@ export default function App() {
     }
   }, [])
 
-  // Load data on mount (after auth is ready)
+  // Load data on mount
   useEffect(() => {
     if (!authReady || !authed) return
     ;(async () => {
@@ -121,6 +155,7 @@ export default function App() {
 
   const updateDaily = useCallback((patch) => {
     setDaily(prev => {
+      const prevCount = countCheckIns(prev)
       const next = { ...prev, ...patch }
       storage.set(getDailyKey(), next)
 
@@ -138,7 +173,7 @@ export default function App() {
       if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) setEventMessage(EVENT_MESSAGES.energy_great)
       if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) setEventMessage(EVENT_MESSAGES.sleep_bad)
 
-      // Compute meds streak when meds are updated
+      // Compute meds streak
       if (patch.meds && (patch.meds.morning === true || patch.meds.evening === true)) {
         computeMedStreak(next).then(streak => {
           if (streak !== undefined) updateProfile({ medStreak: streak })
@@ -146,35 +181,128 @@ export default function App() {
       }
 
       // Update streak if first check-in today
-      const hadAny = countCheckIns(prev) > 0
+      const hadAny = prevCount > 0
       const hasNow = countCheckIns(next) > 0
       if (!hadAny && hasNow && profile) {
         updateStreak(profile)
       }
 
+      // Check milestones
+      const newCount = countCheckIns(next)
+      const milestone = checkMilestone(prevCount, newCount)
+      if (milestone) {
+        setTimeout(() => {
+          setEventMessage(milestone.message)
+          if (milestone.reaction === 'celebrate') {
+            setConfettiTrigger(t => t + 1)
+            celebrationFeedback()
+          } else {
+            milestoneFeedback()
+          }
+        }, 300)
+      }
+
+      // Creature reaction — detect what changed
+      const reactionKey = detectReactionKey(prev, patch)
+      if (reactionKey && CREATURE_REACTIONS[reactionKey]) {
+        setCreatureReaction(CREATURE_REACTIONS[reactionKey].animation)
+        setTimeout(() => setCreatureReaction(null), CREATURE_REACTIONS[reactionKey].duration)
+      }
+
       return next
     })
-  }, [profile, updateStreak])
+  }, [profile, updateStreak, updateProfile])
+
+  // Detect which check-in was just completed
+  function detectReactionKey(prev, patch) {
+    if (patch.sleep?.quality && !prev.sleep?.quality) return 'sleep'
+    if (patch.water && (patch.water.count > (prev.water?.count || 0))) return 'water'
+    if (patch.dbt?.practiced && !prev.dbt?.practiced) return 'dbt'
+    if (patch.meds) return 'meds'
+    if (patch.energy !== undefined && prev.energy === undefined) return 'energy'
+    if (patch.circles?.choice && !prev.circles?.choice) return 'circles'
+    if (patch.emotions?.length > 0 && !(prev.emotions?.length > 0)) return 'feelings'
+    if (patch.puppies) return 'puppies'
+    return null
+  }
 
   const goHome = useCallback(() => {
-    setTab('home')
-    setSubView(null)
-    setFromHome(false)
+    handleTabChange('home')
   }, [])
 
-  // Navigation handler used by HomeTab and other tabs
+  // Navigation handler with slide direction
   const handleNavigate = useCallback((targetTab, targetSub) => {
     if (targetTab === '__updateDaily') {
-      // Special: HomeTab passes word-of-day updates this way
       updateDaily(targetSub)
       return
     }
     if (tab === 'home' && targetTab !== 'home') {
       setFromHome(true)
     }
+    // Determine slide direction
+    const fromIdx = TAB_ORDER.indexOf(tab)
+    const toIdx = TAB_ORDER.indexOf(targetTab)
+    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+      setSlideDir(toIdx > fromIdx ? 'right' : 'left')
+    }
     setTab(targetTab)
     setSubView(targetSub || null)
   }, [updateDaily, tab])
+
+  const handleTabChange = useCallback((t) => {
+    const fromIdx = TAB_ORDER.indexOf(tab)
+    const toIdx = TAB_ORDER.indexOf(t)
+    if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+      setSlideDir(toIdx > fromIdx ? 'right' : 'left')
+    }
+    setTab(t)
+    setSubView(null)
+    setFromHome(false)
+  }, [tab])
+
+  // Swipe gesture handling
+  const handleTouchStart = useCallback((e) => {
+    if (showCrisis || showSettings) return
+    const touch = e.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+  }, [showCrisis, showSettings])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!touchStartRef.current || showCrisis || showSettings) return
+    const touch = e.changedTouches[0]
+    const dx = touch.clientX - touchStartRef.current.x
+    const dy = touch.clientY - touchStartRef.current.y
+    const dt = Date.now() - touchStartRef.current.time
+
+    // Must be fast enough and horizontal enough
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 40 && dt < 400) {
+      const idx = TAB_ORDER.indexOf(tab)
+      if (dx < 0 && idx < TAB_ORDER.length - 1) {
+        handleTabChange(TAB_ORDER[idx + 1])
+      } else if (dx > 0 && idx > 0) {
+        handleTabChange(TAB_ORDER[idx - 1])
+      }
+    }
+    touchStartRef.current = null
+  }, [tab, handleTabChange, showCrisis, showSettings])
+
+  // Toast helper
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg)
+  }, [])
+
+  // Milestone handler from HomeTab
+  const handleMilestone = useCallback((milestone) => {
+    if (milestone.reaction === 'celebrate') {
+      setConfettiTrigger(t => t + 1)
+    }
+  }, [])
+
+  // Creature reaction handler from HomeTab
+  const handleCreatureReaction = useCallback((animation) => {
+    setCreatureReaction(animation)
+    setTimeout(() => setCreatureReaction(null), 800)
+  }, [])
 
   // Onboarding complete
   const handleOnboardingComplete = async (profileData) => {
@@ -182,17 +310,28 @@ export default function App() {
     setTab('home')
   }
 
-  // Show loading while auth initializes
+  // Dark mode toggle (for settings)
+  const toggleDarkMode = useCallback(async (val) => {
+    setDarkMode(val)
+    await storage.set('diana-dark-mode', val ? 'on' : 'off')
+  }, [])
+
+  // Haptics toggle
+  const toggleHaptics = useCallback(async (val) => {
+    setHapticsEnabled(val)
+    await storage.set('diana-haptics', val)
+  }, [])
+
+  // Loading + breathing entry
   if (!authReady || (authed && loading)) {
     return (
-      <div style={{ minHeight: '100dvh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontSize: 64, animation: 'pulse 1.5s ease-in-out infinite' }}>🐾</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#8A7F7F' }}>Loading...</div>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg, #FFF8F3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+        <div style={{ fontSize: 64, animation: 'breathing-entry 1.5s ease-in-out infinite' }}>🐾</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-light, #8A7F7F)' }}>Loading...</div>
       </div>
     )
   }
 
-  // Show Google auth if Supabase is configured but user not signed in
   if (supabaseEnabled && !authed) {
     return <AuthModal />
   }
@@ -202,6 +341,10 @@ export default function App() {
   }
 
   const checkInCount = countCheckIns(daily)
+  const moodState = getMoodState(checkInCount)
+
+  // Slide animation class
+  const slideClass = slideDir === 'right' ? 'slide-right' : slideDir === 'left' ? 'slide-left' : ''
 
   const renderTab = () => {
     switch (tab) {
@@ -212,6 +355,10 @@ export default function App() {
             daily={daily}
             onNavigate={handleNavigate}
             onEventMessage={setEventMessage}
+            onUpdate={updateDaily}
+            onToast={showToast}
+            onCreatureReaction={handleCreatureReaction}
+            onMilestone={handleMilestone}
           />
         )
       case 'recovery':
@@ -255,7 +402,11 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: '#FFF8F3', position: 'relative' }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: 'var(--bg, #FFF8F3)', position: 'relative' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Crisis button — always visible */}
       <CrisisButton onClick={() => setShowCrisis(true)} />
 
@@ -265,14 +416,23 @@ export default function App() {
         style={{
           position: 'fixed', top: 16, left: 16, zIndex: 900,
           width: 44, height: 44, borderRadius: '50%',
-          background: 'white', border: '2px solid #F0E8E0',
+          background: 'var(--card, white)', border: '2px solid #F0E8E0',
           fontSize: 20, cursor: 'pointer',
-          boxShadow: '0 2px 12px rgba(61,53,53,0.08)',
+          boxShadow: 'var(--shadow, 0 2px 12px rgba(61,53,53,0.08))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         ⚙️
       </button>
+
+      {/* Mini pet on non-home tabs */}
+      {tab !== 'home' && (
+        <MiniPet
+          creatureId={profile.creature}
+          moodState={moodState}
+          onClick={goHome}
+        />
+      )}
 
       {/* Pet header — only on home tab */}
       {tab === 'home' && (
@@ -283,16 +443,28 @@ export default function App() {
           streak={profile.streak || 0}
           eventMessage={eventMessage}
           onEventMessageShown={() => setEventMessage(null)}
+          reaction={creatureReaction}
         />
       )}
 
-      {/* Tab content */}
-      <div style={{ flex: 1, overflowY: tab === 'home' ? 'auto' : 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Tab content with slide transitions */}
+      <div
+        key={tab}
+        className={`tab-content ${slideClass}`}
+        style={{ flex: 1, overflowY: tab === 'home' ? 'auto' : 'hidden', display: 'flex', flexDirection: 'column' }}
+        onAnimationEnd={() => setSlideDir(null)}
+      >
         {renderTab()}
       </div>
 
       {/* Bottom navigation */}
-      <BottomNav activeTab={tab} onTabChange={(t) => { setTab(t); setSubView(null); setFromHome(false) }} />
+      <BottomNav activeTab={tab} onTabChange={handleTabChange} />
+
+      {/* Toast notification */}
+      <Toast message={toastMsg} onDone={() => setToastMsg(null)} />
+
+      {/* Confetti celebration */}
+      <Confetti trigger={confettiTrigger} />
 
       {/* Modals */}
       <CrisisToolkit
@@ -308,6 +480,9 @@ export default function App() {
         onClose={() => setShowSettings(false)}
         profile={profile}
         onProfileUpdate={updateProfile}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
+        onToggleHaptics={toggleHaptics}
       />
     </div>
   )

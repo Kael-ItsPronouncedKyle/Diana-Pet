@@ -135,6 +135,123 @@ textarea, input { font-family: inherit; }
   100% { transform: scale(1); }
 }
 
+/* Check-in sheet */
+@keyframes sheet-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes sheet-slide-down {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+@keyframes sheet-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sheet-backdrop-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Toast notifications */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+
+/* Confetti burst */
+@keyframes confetti-burst {
+  0%   { transform: translate(0, 0) scale(0); opacity: 1; }
+  50%  { opacity: 1; }
+  100% { transform: translate(
+    calc(cos(var(--angle)) * var(--distance)),
+    calc(sin(var(--angle)) * var(--distance))
+  ) scale(1); opacity: 0; }
+}
+
+/* Card completion bounce */
+@keyframes card-complete {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Milestone pulse */
+@keyframes milestone-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(107,191,138,0); }
+  50% { box-shadow: 0 0 20px 8px rgba(107,191,138,0.3); }
+}
+
+/* Tab transitions */
+@keyframes slide-in-right {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* Breathing entry */
+@keyframes breathing-entry {
+  0%   { transform: scale(0.95); opacity: 0.6; }
+  50%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Creature reactions */
+@keyframes creature-yawn {
+  0%, 100% { transform: scale(1) rotate(0); }
+  30% { transform: scale(1.15) rotate(-5deg); }
+  60% { transform: scale(1.1) rotate(3deg); }
+}
+@keyframes creature-drink {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  40% { transform: translateY(4px) rotate(10deg); }
+  70% { transform: translateY(2px) rotate(-5deg); }
+}
+@keyframes creature-meditate {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.05) translateY(-6px); }
+}
+@keyframes creature-wag {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(12deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-8deg); }
+}
+@keyframes creature-celebrate {
+  0% { transform: scale(1) translateY(0); }
+  20% { transform: scale(1.2) translateY(-15px); }
+  40% { transform: scale(1.05) translateY(0); }
+  60% { transform: scale(1.15) translateY(-10px); }
+  80% { transform: scale(1.02) translateY(0); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* Streak flame pulse */
+@keyframes flame-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.2); }
+}
+
+/* Mini pet idle */
+@keyframes mini-pet-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Swipe hint */
+@keyframes swipe-hint {
+  0%, 100% { transform: translateX(0); opacity: 0; }
+  50% { transform: translateX(10px); opacity: 0.4; }
+}
+
 /* ── Utility Classes ────────────────────────────────────────── */
 .fade-up { animation: fade-up 0.25s ease-out both; }
 
@@ -180,4 +297,32 @@ textarea, input { font-family: inherit; }
 /* ── Safe area padding ──────────────────────────────────────── */
 .safe-bottom {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* ── Dark Mode ─────────────────────────────────────────────── */
+.dark-mode {
+  --bg: #1A1614;
+  --card: #252120;
+  --text: #F0E8E0;
+  --text-light: #A89F9F;
+  --primary-light: #1A3530;
+  --accent-light: #3D2520;
+  --green-bg: #1A2D1F;
+  --yellow-bg: #2D2810;
+  --red-bg: #2D1A1A;
+  --blue-bg: #1A2530;
+}
+.dark-mode body,
+.dark-mode #root { background: var(--bg); color: var(--text); }
+.dark-mode .card { background: var(--card); }
+
+/* ── Tab Transition Wrapper ────────────────────────────────── */
+.tab-content {
+  animation: fade-up 0.25s ease-out both;
+}
+.tab-content.slide-right {
+  animation: slide-in-right 0.2s ease-out both;
+}
+.tab-content.slide-left {
+  animation: slide-in-left 0.2s ease-out both;
 }

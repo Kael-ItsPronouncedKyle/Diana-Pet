@@ -29,13 +29,17 @@ function SparkleParticles() {
   )
 }
 
-export default function PetCreature({ creatureId, moodState, size = 90, streak = 0 }) {
+export default function PetCreature({ creatureId, moodState, size = 90, streak = 0, reaction = null, compact = false }) {
   const creature = useMemo(
     () => CREATURES.find(c => c.id === creatureId) || CREATURES[0],
     [creatureId]
   )
 
   const animStyle = useMemo(() => {
+    // Reaction animations override mood animation temporarily
+    if (reaction) {
+      return { animation: `${reaction} 0.8s ease-in-out` }
+    }
     switch (moodState) {
       case 'sleeping':
         return { animation: 'sleepy 3s ease-in-out infinite', opacity: 0.55 }
@@ -48,9 +52,29 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
       default:
         return {}
     }
-  }, [moodState])
+  }, [moodState, reaction])
 
-  const showSparkles = moodState === 'glow'
+  const showSparkles = moodState === 'glow' && !compact
+
+  // Compact mode for mini-pet on non-home tabs
+  if (compact) {
+    return (
+      <div style={{
+        width: size, height: size,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        animation: 'mini-pet-idle 2s ease-in-out infinite',
+      }}>
+        <div style={{
+          fontSize: size * 0.7,
+          lineHeight: 1,
+          userSelect: 'none',
+          ...animStyle,
+        }}>
+          {creature.emoji}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ position: 'relative', width: size + 40, height: size + 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,20 +110,22 @@ export default function PetCreature({ creatureId, moodState, size = 90, streak =
         </div>
       )}
 
-      {/* Streak badge at 2+ days */}
+      {/* Streak badge — enhanced with flame animation at milestones */}
       {streak >= 2 && moodState !== 'sleeping' && (
         <div style={{
           position: 'absolute',
           top: 4,
           right: -2,
-          background: '#FFF8E1',
-          border: '2px solid #F0C050',
-          borderRadius: 10,
-          padding: '2px 6px',
-          fontSize: 11,
-          fontWeight: 800,
+          background: streak >= 7 ? '#FFF0D0' : '#FFF8E1',
+          border: `2px solid ${streak >= 14 ? '#FFD700' : '#F0C050'}`,
+          borderRadius: 12,
+          padding: '3px 8px',
+          fontSize: 12,
+          fontWeight: 900,
           color: '#3D3535',
           whiteSpace: 'nowrap',
+          animation: streak >= 7 ? 'flame-pulse 2s ease-in-out infinite' : 'none',
+          boxShadow: streak >= 14 ? '0 0 8px rgba(255,215,0,0.4)' : 'none',
         }}>
           🔥{streak}
         </div>

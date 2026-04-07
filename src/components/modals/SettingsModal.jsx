@@ -11,7 +11,7 @@ const C = {
 }
 const card = { background: C.card, borderRadius: 20, padding: '18px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 14 }
 
-export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdate }) {
+export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdate, darkMode, onToggleDarkMode, onToggleHaptics }) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmReset2, setConfirmReset2] = useState(false)
   const [crisisKael, setCrisisKael] = useState(profile?.crisisContacts?.kael || '')
@@ -63,7 +63,7 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,53,53,0.7)', display: 'flex', alignItems: 'flex-end' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#FFF8F3', width: '100%', maxWidth: 430, margin: '0 auto', borderRadius: '24px 24px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', animation: 'fade-up 0.25s ease-out' }}>
+      <div style={{ background: 'var(--bg, #FFF8F3)', width: '100%', maxWidth: 430, margin: '0 auto', borderRadius: '24px 24px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', animation: 'fade-up 0.25s ease-out' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 12px', borderBottom: '1px solid #F0E8E0' }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: C.text }}>⚙️ Settings</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: C.textLight, padding: '4px 8px' }}>✕</button>
@@ -128,6 +128,29 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
                     <input type="tel" value={val} onChange={e => setter(e.target.value)} placeholder="+1 555 000 0000" style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0', fontSize: 15, fontWeight: 700, background: 'white', color: C.text, outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 ))}
+              </div>
+
+              {/* Dark Mode + Haptics */}
+              <div style={card}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Display & Feel</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>🌙 Dark mode</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight }}>Easier on eyes at night</div>
+                  </div>
+                  <button onClick={() => onToggleDarkMode?.(!darkMode)} style={{ width: 52, height: 28, borderRadius: 14, border: 'none', background: darkMode ? C.primary : '#D0C8C0', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 3, left: darkMode ? 26 : 3, width: 22, height: 22, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>📳 Haptic feedback</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight }}>Vibrate on taps and saves</div>
+                  </div>
+                  <button onClick={() => onToggleHaptics?.(!(profile?.haptics ?? true))} style={{ width: 52, height: 28, borderRadius: 14, border: 'none', background: (profile?.haptics ?? true) ? C.primary : '#D0C8C0', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 3, left: (profile?.haptics ?? true) ? 26 : 3, width: 22, height: 22, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                  </button>
+                </div>
               </div>
 
               {/* Schizoaffective module */}

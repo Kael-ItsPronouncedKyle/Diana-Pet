@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 
-const SECTIONS = ['grounding', 'breathe', 'tipp', 'contacts', 'urge-surfing', 'safe-message']
+const SECTIONS = ['safety-plan', 'grounding', 'breathe', 'tipp', 'urge-surfing', 'safe-message', 'contacts']
 const SECTION_LABELS = {
+  'safety-plan': '🛡️ My Safety Plan',
   grounding: '🌱 Grounding',
   breathe: '🫁 Box Breathing',
   tipp: '🧊 TIPP: Ice Dive',
-  contacts: '📞 Call Someone',
   'urge-surfing': '🌊 Urge Surfing',
   'safe-message': '💙 Safe Message',
+  contacts: '📞 If you still need someone',
 }
 
 function BoxBreathing() {
@@ -30,7 +31,6 @@ function BoxBreathing() {
     return () => clearInterval(timerRef.current)
   }, [])
 
-  const isExpanding = phase === 0
   const isHolding = phase === 1 || phase === 3
 
   return (
@@ -53,13 +53,90 @@ function BoxBreathing() {
   )
 }
 
-export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {} }) {
-  const [activeSection, setActiveSection] = useState('grounding')
+function SafetyPlanDisplay({ safetyPlan }) {
+  if (!safetyPlan || (!safetyPlan.completedAt && !safetyPlan.warningSigns?.length)) {
+    return (
+      <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🛡️</div>
+        <p style={{ fontSize: 16, fontWeight: 700, color: '#3D3535', marginBottom: 8 }}>
+          You haven't set up your safety plan yet.
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5 }}>
+          Go to Settings to create one. It takes a few minutes and it's worth it.
+        </p>
+      </div>
+    )
+  }
+
+  const sections = [
+    { key: 'warningSigns', title: '⚠️ Warning signs I notice', items: safetyPlan.warningSigns },
+    { key: 'selfCoping', title: '💪 Things I can do on my own', items: safetyPlan.selfCoping },
+    { key: 'distractionPeople', title: '🌎 People and places that help', items: safetyPlan.distractionPeople },
+    { key: 'helpContacts', title: '📱 People I can reach out to', items: safetyPlan.helpContacts, isContacts: true },
+    { key: 'professionals', title: '🏥 Professionals I can contact', items: safetyPlan.professionals, isContacts: true },
+    { key: 'environmentSafe', title: '🏠 Making my space safe', items: safetyPlan.environmentSafe },
+  ]
+
+  return (
+    <div>
+      {sections.map(section => {
+        if (!section.items || section.items.length === 0) return null
+        return (
+          <div key={section.key} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#6BA89E', marginBottom: 8 }}>{section.title}</div>
+            {section.isContacts ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {section.items.map((c, i) => (
+                  <a
+                    key={i}
+                    href={c.phone ? `tel:${c.phone}` : undefined}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div style={{ background: '#E8F4F1', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, border: '2px solid #6BA89E' }}>
+                      <span style={{ fontSize: 20 }}>📞</span>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#3D3535', fontSize: 15 }}>{c.name}</div>
+                        {c.phone && <div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{c.phone}</div>}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {section.items.map((item, i) => (
+                  <div key={i} style={{ padding: '10px 14px', background: '#F8F4F0', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#3D3535' }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, safetyPlan = null }) {
+  const [activeSection, setActiveSection] = useState('safety-plan')
 
   if (!isOpen) return null
 
+  // Gather all contacts for the "If you still need someone" section
+  const allContacts = []
+  // Safety plan contacts first
+  if (safetyPlan?.helpContacts) {
+    safetyPlan.helpContacts.forEach(c => allContacts.push(c))
+  }
+  if (safetyPlan?.professionals) {
+    safetyPlan.professionals.forEach(c => allContacts.push(c))
+  }
+
   const renderSection = () => {
     switch (activeSection) {
+      case 'safety-plan':
+        return <SafetyPlanDisplay safetyPlan={safetyPlan} />
       case 'grounding':
         return (
           <div style={{ lineHeight: 1.6 }}>
@@ -96,39 +173,6 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {} }) 
             </div>
           </div>
         )
-      case 'contacts':
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {crisisContacts.kael && (
-              <a href={`tel:${crisisContacts.kael}`} style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#E8F4F1', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #6BA89E' }}>
-                  <span style={{ fontSize: 28 }}>📞</span>
-                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 16 }}>Call Kael</div><div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{crisisContacts.kael}</div></div>
-                </div>
-              </a>
-            )}
-            {crisisContacts.luis && (
-              <a href={`tel:${crisisContacts.luis}`} style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#E8F4F1', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #6BA89E' }}>
-                  <span style={{ fontSize: 28 }}>📞</span>
-                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 16 }}>Call Luis</div><div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{crisisContacts.luis}</div></div>
-                </div>
-              </a>
-            )}
-            {[
-              { label: '988 Crisis Lifeline', sub: 'Call or text 988', tel: '988', emoji: '💚' },
-              { label: 'Crisis Text Line', sub: 'Text HOME to 741741', tel: '741741', emoji: '💬' },
-              { label: 'SAMHSA Helpline', sub: '1-800-662-4357', tel: '18006624357', emoji: '🏥' },
-            ].map(({ label, sub, tel, emoji }) => (
-              <a key={label} href={`tel:${tel}`} style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#F8F4F0', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #F0E8E0' }}>
-                  <span style={{ fontSize: 28 }}>{emoji}</span>
-                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 15 }}>{label}</div><div style={{ fontSize: 13, color: '#8A7F7F', fontWeight: 600 }}>{sub}</div></div>
-                </div>
-              </a>
-            ))}
-          </div>
-        )
       case 'urge-surfing':
         return (
           <div>
@@ -163,6 +207,61 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {} }) 
               <p key={i} style={{ fontSize: 20, fontWeight: 800, color: i === 3 ? '#6BA89E' : '#3D3535', lineHeight: 1.4, marginBottom: 12 }}>
                 {line}
               </p>
+            ))}
+          </div>
+        )
+      case 'contacts':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Safety plan contacts */}
+            {allContacts.length > 0 && (
+              <>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#8A7F7F', marginBottom: 2 }}>FROM YOUR SAFETY PLAN</div>
+                {allContacts.map((c, i) => (
+                  <a key={`sp-${i}`} href={c.phone ? `tel:${c.phone}` : undefined} style={{ textDecoration: 'none' }}>
+                    <div style={{ background: '#E8F4F1', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #6BA89E' }}>
+                      <span style={{ fontSize: 28 }}>📞</span>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#3D3535', fontSize: 16 }}>{c.name}</div>
+                        {c.phone && <div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{c.phone}</div>}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+                <div style={{ height: 8 }} />
+              </>
+            )}
+
+            {/* Kael and Luis */}
+            {crisisContacts.kael && (
+              <a href={`tel:${crisisContacts.kael}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#E8F4F1', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #6BA89E' }}>
+                  <span style={{ fontSize: 28 }}>📞</span>
+                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 16 }}>Call Kael</div><div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{crisisContacts.kael}</div></div>
+                </div>
+              </a>
+            )}
+            {crisisContacts.luis && (
+              <a href={`tel:${crisisContacts.luis}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#E8F4F1', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #6BA89E' }}>
+                  <span style={{ fontSize: 28 }}>📞</span>
+                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 16 }}>Call Luis</div><div style={{ fontSize: 13, color: '#6BA89E', fontWeight: 600 }}>{crisisContacts.luis}</div></div>
+                </div>
+              </a>
+            )}
+
+            {/* Crisis lines */}
+            {[
+              { label: '988 Crisis Lifeline', sub: 'Call or text 988', tel: '988', emoji: '💚' },
+              { label: 'Crisis Text Line', sub: 'Text HOME to 741741', tel: '741741', emoji: '💬' },
+              { label: 'SAMHSA Helpline', sub: '1-800-662-4357', tel: '18006624357', emoji: '🏥' },
+            ].map(({ label, sub, tel, emoji }) => (
+              <a key={label} href={`tel:${tel}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#F8F4F0', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, border: '2px solid #F0E8E0' }}>
+                  <span style={{ fontSize: 28 }}>{emoji}</span>
+                  <div><div style={{ fontWeight: 800, color: '#3D3535', fontSize: 15 }}>{label}</div><div style={{ fontSize: 13, color: '#8A7F7F', fontWeight: 600 }}>{sub}</div></div>
+                </div>
+              </a>
             ))}
           </div>
         )

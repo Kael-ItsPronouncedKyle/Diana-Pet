@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Pet from '../Pet/Pet.jsx'
 import { getTimeOfDay } from '../../utils/dates.js'
 import { countCheckIns } from '../../utils/checkIns.js'
@@ -14,6 +14,7 @@ const TIME_FLOWS = {
       { key: 'sleep', label: '😴 Sleep check-in', tab: 'body', sub: 'sleep' },
       { key: 'meds', label: '💊 Morning meds', tab: 'body', sub: 'meds' },
       { key: 'energy', label: '⚡ Energy level', tab: 'body', sub: 'energy' },
+      { key: 'feelings', label: '🎭 Feelings check-in', tab: 'recovery', sub: 'feelings' },
       { key: 'word', label: '📖 Word of the Day', tab: null, sub: 'word' },
     ],
   },
@@ -32,6 +33,7 @@ const TIME_FLOWS = {
     subtext: 'How did today go?',
     items: [
       { key: 'circles', label: '⭕ Three Circles check-in', tab: 'recovery', sub: 'circles' },
+      { key: 'feelings', label: '🎭 Feelings check-in', tab: 'recovery', sub: 'feelings' },
       { key: 'meds', label: '💊 Evening meds', tab: 'body', sub: 'meds' },
       { key: 'sensory', label: '🧠 Sensory load check', tab: 'body', sub: 'sensory' },
       { key: 'puppies', label: '🐾 Puppy training', tab: 'puppies', sub: null },
@@ -59,34 +61,43 @@ function isDone(key, daily) {
   if (key === 'sensory') return daily.sensory?.level !== undefined
   if (key === 'puppies') return !!(daily.puppies?.apollo?.skills && Object.keys(daily.puppies.apollo.skills).length > 0)
   if (key === 'word') return !!daily.wordOfDay?.learned
+  if (key === 'feelings') return daily.emotions && daily.emotions.length > 0
   return false
 }
 
 function WordOfDay({ daily, onUpdate }) {
   const [showDetail, setShowDetail] = useState(false)
+  const [word, setWord] = useState(null)
 
-  const word = useMemo(() => {
+  // Load word using storage utility (not localStorage directly)
+  useEffect(() => {
     if (daily?.wordOfDay?.word) {
       const found = WORDS.find(w => w.id === daily.wordOfDay.word)
-      if (found) return found
+      if (found) { setWord(found); return }
     }
-    // Pick today's word based on date index
-    const seen = JSON.parse(localStorage.getItem('diana-words-seen') || '[]')
-    const unseen = WORDS.filter(w => !seen.includes(w.id))
-    const pool = unseen.length > 0 ? unseen : WORDS
-    const idx = new Date().toISOString().slice(0, 10).split('-').reduce((a, b) => a + parseInt(b), 0) % pool.length
-    return pool[idx]
+    // Pick today's word based on date index, using storage utility
+    ;(async () => {
+      const seen = (await storage.get('diana-words-seen')) || []
+      const unseen = WORDS.filter(w => !seen.includes(w.id))
+      const pool = unseen.length > 0 ? unseen : WORDS
+      const idx = new Date().toISOString().slice(0, 10).split('-').reduce((a, b) => a + parseInt(b), 0) % pool.length
+      setWord(pool[idx])
+    })()
   }, [daily?.wordOfDay?.word])
 
   const learned = daily?.wordOfDay?.learned
 
   const markLearned = async () => {
-    const seen = JSON.parse(localStorage.getItem('diana-words-seen') || '[]')
+    if (!word) return
+    const seen = (await storage.get('diana-words-seen')) || []
     if (!seen.includes(word.id)) {
-      localStorage.setItem('diana-words-seen', JSON.stringify([...seen, word.id]))
+      await storage.set('diana-words-seen', [...seen, word.id])
     }
     onUpdate({ wordOfDay: { word: word.id, learned: true } })
   }
+
+  // Show nothing while word is loading
+  if (!word) return null
 
   if (!showDetail) return (
     <div
@@ -139,7 +150,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage }) 
   const checkInCount = countCheckIns(daily)
   const creatureName = profile?.creatureName || 'Friend'
 
-  const allSections = ['circles', 'sleep', 'meds', 'energy', 'water', 'dbt', 'sensory', 'puppies', 'word']
+  const allSections = ['circles', 'feelings', 'sleep', 'meds', 'energy', 'water', 'dbt', 'sensory', 'puppies', 'word']
   const doneCount = allSections.filter(k => isDone(k, daily)).length
   const allDone = doneCount === allSections.length
 
@@ -221,6 +232,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage }) 
             { key: 'energy', label: 'Energy', emoji: '⚡' },
             { key: 'water', label: 'Water', emoji: '💧' },
             { key: 'circles', label: 'Circles', emoji: '⭕' },
+            { key: 'feelings', label: 'Feelings', emoji: '🎭' },
             { key: 'dbt', label: 'DBT', emoji: '💚' },
             { key: 'sensory', label: 'Sensory', emoji: '🧠' },
             { key: 'puppies', label: 'Puppies', emoji: '🐾' },

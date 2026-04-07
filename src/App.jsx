@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import storage from './utils/storage.js'
 import { today, getDailyKey } from './utils/dates.js'
-import { countCheckIns } from './utils/checkIns.js'
+import { countCheckIns, computeMedStreak } from './utils/checkIns.js'
+import { supabase, supabaseEnabled } from './lib/supabase.js'
 
 import Pet from './components/Pet/Pet.jsx'
 import BottomNav from './components/shared/BottomNav.jsx'
 import OnboardingFlow from './components/modals/OnboardingFlow.jsx'
+import AuthModal from './components/modals/AuthModal.jsx'
 import CrisisToolkit, { CrisisButton } from './components/modals/CrisisToolkit.jsx'
 import SettingsModal from './components/modals/SettingsModal.jsx'
 import HomeTab from './components/tabs/HomeTab.jsx'
@@ -31,6 +33,8 @@ const EVENT_MESSAGES = {
 
 export default function App() {
   const [loading, setLoading] = useState(true)
+  const [authReady, setAuthReady] = useState(!supabaseEnabled) // skip auth if no Supabase
+  const [authed, setAuthed] = useState(!supabaseEnabled)
   const [profile, setProfile] = useState(null)
   const [daily, setDaily] = useState({})
   const [tab, setTab] = useState('home')
@@ -39,8 +43,32 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [eventMessage, setEventMessage] = useState(null)
 
-  // Load on mount
+  // Auth state listener
   useEffect(() => {
+    if (!supabaseEnabled || !supabase) {
+      setAuthReady(true)
+      setAuthed(true)
+      return
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          storage.setUserId(session.user.id)
+          await storage.sync()
+          setAuthed(true)
+        } else {
+          storage.setUserId(null)
+          setAuthed(false)
+        }
+        setAuthReady(true)
+      }
+    )
+    return () => subscription?.unsubscribe()
+  }, [])
+
+  // Load data on mount (after auth is ready)
+  useEffect(() => {
+    if (!authReady || !authed) return
     ;(async () => {
       const p = await storage.get('diana-profile')
       const d = await storage.get(getDailyKey())
@@ -48,7 +76,7 @@ export default function App() {
       setDaily(d || {})
       setLoading(false)
     })()
-  }, [])
+  }, [authReady, authed])
 
   const saveProfile = useCallback(async (p) => {
     setProfile(p)
@@ -94,6 +122,13 @@ export default function App() {
       if (patch.energy !== undefined && patch.energy === 5 && !prev.energy) setEventMessage(EVENT_MESSAGES.energy_great)
       if (patch.sleep?.quality !== undefined && patch.sleep.quality <= 2) setEventMessage(EVENT_MESSAGES.sleep_bad)
 
+      // Compute meds streak when meds are updated
+      if (patch.meds && (patch.meds.morning === true || patch.meds.evening === true)) {
+        computeMedStreak(next).then(streak => {
+          if (streak !== undefined) updateProfile({ medStreak: streak })
+        })
+      }
+
       // Update streak if first check-in today
       const hadAny = countCheckIns(prev) > 0
       const hasNow = countCheckIns(next) > 0
@@ -122,13 +157,19 @@ export default function App() {
     setTab('home')
   }
 
-  if (loading) {
+  // Show loading while auth initializes
+  if (!authReady || (authed && loading)) {
     return (
       <div style={{ minHeight: '100dvh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div style={{ fontSize: 64, animation: 'pulse 1.5s ease-in-out infinite' }}>🐾</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#8A7F7F' }}>Loading...</div>
       </div>
     )
+  }
+
+  // Show Google auth if Supabase is configured but user not signed in
+  if (supabaseEnabled && !authed) {
+    return <AuthModal />
   }
 
   if (!profile) {
@@ -227,6 +268,7 @@ export default function App() {
         isOpen={showCrisis}
         onClose={() => setShowCrisis(false)}
         crisisContacts={profile.crisisContacts || {}}
+        safetyPlan={profile.safetyPlan || null}
       />
       <SettingsModal
         isOpen={showSettings}

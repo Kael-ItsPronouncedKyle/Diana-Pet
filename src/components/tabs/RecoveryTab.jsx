@@ -1,9 +1,188 @@
 import { useState, useMemo } from 'react'
 import { DBT_SKILLS } from '../../constants/dbt.js'
+import { EMOTION_QUADRANTS } from '../../constants/emotions.js'
+import { CONTEXT_SKILL_MAP } from '../../constants/skillMap.js'
 import { today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 
-// ─── Three Circles ─────────────────────────────────────────────────────────
+// ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
+
+function EmotionWheel({ daily, onUpdate }) {
+  const [expandedQuadrant, setExpandedQuadrant] = useState(null)
+  const [selected, setSelected] = useState(daily?.emotions || [])
+  const [emotionContext, setEmotionContext] = useState(daily?.emotionContext || '')
+  const [saved, setSaved] = useState(!!(daily?.emotions?.length))
+  const [showContext, setShowContext] = useState(false)
+
+  const toggleEmotion = (id) => {
+    setSelected(prev => {
+      if (prev.includes(id)) return prev.filter(e => e !== id)
+      if (prev.length >= 3) return prev // max 3
+      return [...prev, id]
+    })
+  }
+
+  const allEmotions = EMOTION_QUADRANTS.flatMap(q => q.emotions)
+
+  const save = () => {
+    onUpdate({ emotions: selected, emotionContext: emotionContext.trim() })
+    setSaved(true)
+  }
+
+  if (saved && selected.length > 0) {
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <div style={{ background: '#E8F4F1', borderRadius: 20, padding: '20px', border: '2px solid #6BA89E', textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>💚</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#3D3535', marginBottom: 12 }}>
+            You named what you feel. That takes real strength.
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
+            {selected.map(id => {
+              const em = allEmotions.find(e => e.id === id)
+              if (!em) return null
+              const q = EMOTION_QUADRANTS.find(qu => qu.emotions.some(e => e.id === id))
+              return (
+                <span key={id} style={{ padding: '6px 14px', borderRadius: 20, background: q?.bg || '#F0E8E0', color: q?.color || '#3D3535', fontSize: 14, fontWeight: 700 }}>
+                  {em.label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+        <button
+          onClick={() => setSaved(false)}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Change my answer
+        </button>
+      </div>
+    )
+  }
+
+  if (showContext) {
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <div style={{ background: 'white', borderRadius: 20, padding: '18px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 6 }}>What started this feeling?</div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12 }}>You can type, talk, or skip this.</p>
+          <textarea
+            value={emotionContext}
+            onChange={e => setEmotionContext(e.target.value)}
+            placeholder="Something happened, or maybe nothing specific..."
+            rows={3}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+              fontSize: 14, fontWeight: 600, background: 'white', color: '#3D3535',
+              resize: 'none', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={save} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+            Save
+          </button>
+          <button onClick={() => { setEmotionContext(''); save() }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            Skip
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <p style={{ fontSize: 15, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.5 }}>
+        What are you feeling right now? Pick up to 3.
+      </p>
+
+      {/* Quadrant grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {EMOTION_QUADRANTS.map(q => (
+          <button
+            key={q.id}
+            onClick={() => setExpandedQuadrant(expandedQuadrant === q.id ? null : q.id)}
+            style={{
+              padding: '16px 12px', borderRadius: 16,
+              background: expandedQuadrant === q.id ? q.bg : 'white',
+              border: `3px solid ${expandedQuadrant === q.id ? q.color : '#F0E8E0'}`,
+              cursor: 'pointer', textAlign: 'center',
+              boxShadow: '0 2px 12px rgba(61,53,53,0.06)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{q.emoji}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: q.color, lineHeight: 1.3 }}>{q.label}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Expanded quadrant emotions */}
+      {expandedQuadrant && (() => {
+        const q = EMOTION_QUADRANTS.find(qu => qu.id === expandedQuadrant)
+        if (!q) return null
+        return (
+          <div style={{ background: q.bg, borderRadius: 20, padding: '16px', border: `2px solid ${q.color}`, marginBottom: 16, animation: 'fade-up 0.2s ease-out' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: q.color, marginBottom: 10 }}>{q.emoji} {q.label}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {q.emotions.map(em => {
+                const isSelected = selected.includes(em.id)
+                const canSelect = isSelected || selected.length < 3
+                return (
+                  <button
+                    key={em.id}
+                    onClick={() => canSelect && toggleEmotion(em.id)}
+                    style={{
+                      padding: '10px 16px', borderRadius: 20,
+                      background: isSelected ? q.color : 'white',
+                      color: isSelected ? 'white' : '#3D3535',
+                      border: `2px solid ${isSelected ? q.color : '#F0E8E0'}`,
+                      fontSize: 14, fontWeight: 700, cursor: canSelect ? 'pointer' : 'default',
+                      opacity: canSelect ? 1 : 0.5,
+                      minHeight: 44,
+                    }}
+                  >
+                    {em.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Selected emotions + definitions */}
+      {selected.length > 0 && (
+        <div style={{ background: 'white', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 16, animation: 'fade-up 0.2s ease-out' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#8A7F7F', marginBottom: 10 }}>YOU PICKED:</div>
+          {selected.map(id => {
+            const em = allEmotions.find(e => e.id === id)
+            if (!em) return null
+            const q = EMOTION_QUADRANTS.find(qu => qu.emotions.some(e => e.id === id))
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid #F0E8E0' }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: q?.color || '#3D3535', minWidth: 90 }}>{em.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.4 }}>{em.def}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Next button */}
+      {selected.length > 0 && (
+        <button
+          onClick={() => setShowContext(true)}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
+        >
+          Next
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Three Circles + Secrecy Test (T1-06) ─────────────────────────────────────
 
 const CIRCLES = [
   { id: 'outer', emoji: '💚', color: '#6BBF8A', bg: '#E6F7EC', border: '#6BBF8A', label: 'Outer Circle', sub: 'Healthy choices. Things that help me heal.', journal: 'What helped you stay here today?' },
@@ -17,10 +196,14 @@ const AFFIRM = {
   outer: "Green circle day! You're healing. 💚",
 }
 
-function ThreeCircles({ daily, onUpdate }) {
+function ThreeCircles({ daily, onUpdate, onOpenCrisis }) {
   const [journalText, setJournalText] = useState(daily?.circles?.journal || '')
   const [showJournal, setShowJournal] = useState(!!daily?.circles?.choice)
+  const [secrecyAnswer, setSecrecyAnswer] = useState(daily?.secrecyTest ?? null)
+  const [showSecrecyTest, setShowSecrecyTest] = useState(false)
   const selected = daily?.circles?.choice
+
+  const needsSecrecyTest = selected === 'middle' || selected === 'inner'
 
   const pick = (id) => {
     onUpdate({ circles: { choice: id, journal: journalText, timestamp: Date.now() } })
@@ -29,6 +212,21 @@ function ThreeCircles({ daily, onUpdate }) {
 
   const saveJournal = () => {
     onUpdate({ circles: { choice: selected, journal: journalText, timestamp: Date.now() } })
+    if (needsSecrecyTest && secrecyAnswer === null) {
+      setShowSecrecyTest(true)
+    }
+  }
+
+  const skipJournal = () => {
+    onUpdate({ circles: { choice: selected, journal: '', timestamp: Date.now() } })
+    if (needsSecrecyTest && secrecyAnswer === null) {
+      setShowSecrecyTest(true)
+    }
+  }
+
+  const answerSecrecy = (answer) => {
+    setSecrecyAnswer(answer)
+    onUpdate({ secrecyTest: answer })
   }
 
   const circle = CIRCLES.find(c => c.id === selected)
@@ -63,7 +261,7 @@ function ThreeCircles({ daily, onUpdate }) {
       </div>
 
       {selected && (
-        <div style={{ background: circle?.bg, borderRadius: 20, padding: '16px', border: `2px solid ${circle?.border}`, animation: 'fade-up 0.2s ease-out' }}>
+        <div style={{ background: circle?.bg, borderRadius: 20, padding: '16px', border: `2px solid ${circle?.border}`, animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>{AFFIRM[selected]}</div>
           <p style={{ fontSize: 14, fontWeight: 700, color: '#8A7F7F', marginBottom: 10 }}>{circle?.journal}</p>
           <textarea
@@ -85,12 +283,57 @@ function ThreeCircles({ daily, onUpdate }) {
               Save ✓
             </button>
             <button
-              onClick={() => onUpdate({ circles: { choice: selected, journal: '', timestamp: Date.now() } })}
+              onClick={skipJournal}
               style={{ padding: '12px 16px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
             >
               Skip
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Secrecy Test — T1-06 */}
+      {needsSecrecyTest && showSecrecyTest && secrecyAnswer === null && (
+        <div style={{ background: '#FFF8E1', borderRadius: 20, padding: '18px', border: '2px solid #F0C050', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 12, lineHeight: 1.4 }}>
+            Would you be okay showing today's check-in to Luis?
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => answerSecrecy(true)}
+              style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#6BBF8A', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer', minHeight: 48 }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => answerSecrecy(false)}
+              style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#E87B7B', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer', minHeight: 48 }}
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
+
+      {secrecyAnswer === true && (
+        <div style={{ background: '#E6F7EC', borderRadius: 20, padding: '16px', border: '2px solid #6BBF8A', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535' }}>
+            Good. Openness is part of healing. 💚
+          </div>
+        </div>
+      )}
+
+      {secrecyAnswer === false && (
+        <div style={{ background: '#FDE8E4', borderRadius: 20, padding: '18px', border: '2px solid #E8907E', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, marginBottom: 12 }}>
+            Secrets are where addiction lives. You don't have to tell Luis right now — but tell someone. Your safety plan has people who can help.
+          </div>
+          <button
+            onClick={onOpenCrisis}
+            style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#E8907E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Open my safety plan
+          </button>
         </div>
       )}
     </div>
@@ -156,7 +399,51 @@ function DbtSkill({ daily, onUpdate }) {
   )
 }
 
-// ─── Urge Logger ───────────────────────────────────────────────────────────
+// ─── Skill Recommendation Card ────────────────────────────────────────────
+
+function SkillCard({ skill, isExpanded, onToggle, onUse }) {
+  const CAT_COLORS = {
+    'mindfulness': '#6BA89E',
+    'distress-tolerance': '#6BA8D6',
+    'emotion-regulation': '#E8907E',
+    'interpersonal': '#6BBF8A',
+  }
+  const catColor = CAT_COLORS[skill.category] || '#6BA89E'
+
+  return (
+    <div
+      style={{
+        background: 'white', borderRadius: 16, padding: isExpanded ? '16px' : '12px 16px',
+        border: `2px solid ${isExpanded ? catColor : '#F0E8E0'}`,
+        cursor: 'pointer', transition: 'all 0.15s',
+      }}
+    >
+      <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'inline-block', background: catColor + '22', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 800, color: catColor, textTransform: 'uppercase', letterSpacing: 0.3, flexShrink: 0 }}>
+          {skill.category.replace('-', ' ')}
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#3D3535', flex: 1 }}>{skill.name}</div>
+        <span style={{ fontSize: 14, color: '#8A7F7F' }}>{isExpanded ? '▲' : '▼'}</span>
+      </div>
+      {isExpanded && (
+        <div style={{ marginTop: 12, animation: 'fade-up 0.15s ease-out' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5, marginBottom: 10 }}>{skill.what}</p>
+          <div style={{ background: '#F8F4F0', borderRadius: 12, padding: '12px 14px', marginBottom: 12 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, margin: 0 }}>{skill.practice}</p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onUse(skill.id) }}
+            style={{ width: '100%', padding: '12px', borderRadius: 12, border: 'none', background: catColor, color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+          >
+            I'll try this ✅
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Urge Logger + Skill Recommendations (T1-07) ─────────────────────────
 
 const CONTEXTS = ['Bored', 'Lonely', 'Stressed', 'Manic energy', 'Triggered by something I saw', "Can't sleep", 'Fighting with someone', "Don't know", 'Other']
 const RESPONSES = ['Used a skill', 'Called someone', 'Rode it out', 'Acted out', 'Still in it']
@@ -166,12 +453,26 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
   const [intensity, setIntensity] = useState(null)
   const [context, setContext] = useState(null)
   const [response, setResponse] = useState(null)
+  const [skillUsed, setSkillUsed] = useState(null)
+  const [expandedSkill, setExpandedSkill] = useState(null)
   const [saved, setSaved] = useState(false)
 
   const urges = daily?.urges || []
 
+  // Get recommended skills for current context
+  const recommendedSkills = useMemo(() => {
+    if (!context) return []
+    const skillIds = CONTEXT_SKILL_MAP[context] || []
+    return skillIds.map(id => DBT_SKILLS.find(s => s.id === id)).filter(Boolean)
+  }, [context])
+
+  const handleUseSkill = (skillId) => {
+    setSkillUsed(skillId)
+    if (!response) setResponse('Used a skill')
+  }
+
   const save = () => {
-    const entry = { timestamp: Date.now(), intensity, context, response }
+    const entry = { timestamp: Date.now(), intensity, context, response, skillUsed }
     const next = [...urges, entry]
     onUpdate({ urges: next })
     setSaved(true)
@@ -184,6 +485,8 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
       setIntensity(null)
       setContext(null)
       setResponse(null)
+      setSkillUsed(null)
+      setExpandedSkill(null)
     }, 2000)
   }
 
@@ -208,9 +511,14 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
               <div style={{ background: '#FDECEC', borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 800, color: '#E87B7B' }}>
                 {u.intensity}/5
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', flex: 1 }}>
                 {u.context} · {u.response}
               </div>
+              {u.skillUsed && (
+                <div style={{ background: '#E8F4F1', borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#6BA89E' }}>
+                  skill used
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -266,6 +574,37 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
         </div>
       </div>
 
+      {/* Skill Recommendations — T1-07 */}
+      {context && recommendedSkills.length > 0 && (
+        <div style={{ background: '#E8F4F1', borderRadius: 20, padding: '16px', border: '2px solid #6BA89E', marginBottom: 12, animation: 'fade-up 0.2s ease-out' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#6BA89E', marginBottom: 12 }}>
+            Skills that can help right now:
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {recommendedSkills.map(skill => (
+              <SkillCard
+                key={skill.id}
+                skill={skill}
+                isExpanded={expandedSkill === skill.id}
+                onToggle={() => setExpandedSkill(expandedSkill === skill.id ? null : skill.id)}
+                onUse={handleUseSkill}
+              />
+            ))}
+          </div>
+          {skillUsed && (
+            <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#6BA89E', padding: '8px 0' }}>
+              Great choice. You've got this. 💚
+            </div>
+          )}
+          <button
+            onClick={onOpenCrisis}
+            style={{ width: '100%', padding: '12px', borderRadius: 14, border: '2px solid #6BA89E', background: 'white', color: '#6BA89E', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+          >
+            Open my safety plan
+          </button>
+        </div>
+      )}
+
       {/* Response */}
       <div style={{ background: 'white', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: '#3D3535', marginBottom: 12 }}>What did you do?</div>
@@ -287,7 +626,7 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
           disabled={!intensity}
           style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: intensity ? '#6BA89E' : '#E0E0E0', color: 'white', fontSize: 14, fontWeight: 800, cursor: intensity ? 'pointer' : 'not-allowed' }}
         >
-          Log it →
+          Log it
         </button>
       </div>
     </div>
@@ -296,8 +635,8 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
 
 // ─── Main Tab ──────────────────────────────────────────────────────────────
 
-const SUBS = ['circles', 'dbt', 'urges']
-const SUB_LABELS = { circles: '⭕ Circles', dbt: '💚 DBT Skill', urges: '🔴 Urges' }
+const SUBS = ['circles', 'feelings', 'dbt', 'urges']
+const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT Skill', urges: '🔴 Urges' }
 
 export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub }) {
   const [sub, setSub] = useState(initialSub || 'circles')
@@ -305,13 +644,13 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: 8, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0' }}>
+      <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0' }}>
         {SUBS.map(s => (
           <button key={s} onClick={() => setSub(s)} style={{
             flex: 1, padding: '10px 4px', borderRadius: 14, border: 'none',
             background: sub === s ? '#6BA89E' : '#F0E8E0',
             color: sub === s ? 'white' : '#3D3535',
-            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+            fontSize: 12, fontWeight: 800, cursor: 'pointer',
           }}>
             {SUB_LABELS[s]}
           </button>
@@ -319,7 +658,8 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub 
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
-        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} />}
+        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
+        {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} />}
         {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} />}
         {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
       </div>

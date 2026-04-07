@@ -321,7 +321,7 @@ export default function DailySchedule({ profile, onProfileUpdate, fromHome, onGo
                       borderRadius: 6,
                       fontSize: '12px',
                       cursor: idx === tempSchedule.length - 1 ? 'not-allowed' : 'pointer',
-                      fontWeight: 5,
+                      fontWeight: 500,
                     }}
                   >
                     ↓ Down

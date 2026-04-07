@@ -213,7 +213,7 @@ function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
         {showEvening && renderMed('Did you take your evening meds? 🌙', 'evening')}
         {profile?.medStreak > 1 && (
           <div style={{ textAlign: 'center', padding: '10px', background: C.greenBg, borderRadius: 14, fontSize: 14, fontWeight: 800, color: C.green }}>
-            💊 {profile.medStreak} days in a row!
+            💊 {profile?.medStreak} days in a row!
           </div>
         )}
       </div>

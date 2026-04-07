@@ -158,12 +158,16 @@ export default function App() {
   }, [saveProfile])
 
   const updateDaily = useCallback((patch) => {
+    let nextValue = null
     setDaily(prev => {
       const next = { ...prev, ...patch }
-      // Store prev state for side effects (run outside updater)
+      // Store prev/next for UI side effects (run in useEffect below)
       pendingEffectsRef.current = { prev, next, patch }
+      nextValue = next
       return next
     })
+    // Persist outside updater — returns Promise so callers can await confirmation
+    return storage.set(getDailyKey(), nextValue)
   }, [])
 
   // Side effects that run AFTER setDaily commits — safe in React 18 StrictMode
@@ -175,9 +179,8 @@ export default function App() {
     const { prev, next, patch } = pending
     const prevCount = countCheckIns(prev)
 
-    // Persist to storage — await encryption before continuing
-    ;(async () => {
-    await storage.set(getDailyKey(), next)
+    // Storage persistence is handled by updateDaily's return promise.
+    // This effect handles only UI side effects (event messages, milestones, reactions).
 
     // Determine the most important event message (priority order: milestone > circles > meds > other)
     let message = null
@@ -231,7 +234,6 @@ export default function App() {
       setCreatureReaction(CREATURE_REACTIONS[reactionKey].animation)
       setTimeout(() => setCreatureReaction(null), CREATURE_REACTIONS[reactionKey].duration)
     }
-    })()
   }, [daily, updateStreak, updateProfile])
 
   // Detect which check-in was just completed
@@ -380,6 +382,7 @@ export default function App() {
             profile={profile}
             onProfileUpdate={updateProfile}
             onOpenCrisis={() => setShowCrisis(true)}
+            onToast={showToast}
             initialSub={subView}
             fromHome={fromHome}
             onGoHome={goHome}
@@ -392,6 +395,7 @@ export default function App() {
             onUpdate={updateDaily}
             profile={profile}
             onProfileUpdate={updateProfile}
+            onToast={showToast}
             fromHome={fromHome}
             onGoHome={goHome}
           />

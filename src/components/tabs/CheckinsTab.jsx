@@ -71,7 +71,7 @@ function isDone(key, daily) {
   return false
 }
 
-export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate, onOpenCrisis, initialSub, fromHome, onGoHome }) {
+export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate, onOpenCrisis, onToast, initialSub, fromHome, onGoHome }) {
   // If we arrive with a specific sub (from HomeTab navigation), go directly there
   const [activeSub, setActiveSub] = useState(initialSub || null)
 
@@ -89,6 +89,7 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
         daily={daily}
         onUpdate={onUpdate}
         onOpenCrisis={onOpenCrisis}
+        onToast={onToast}
         initialSub={activeSub}
         focusMode={true}
         fromHome={fromHome}
@@ -109,6 +110,7 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
         daily={daily}
         onUpdate={onUpdate}
         profile={profile}
+        onToast={onToast}
         initialSub={activeSub}
         focusMode={true}
         fromHome={fromHome}
@@ -140,9 +142,9 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
         </div>
       </div>
     )
-    if (activeSub === 'wins') return wrap(<WinsSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={goBack} />)
-    if (activeSub === 'reading') return wrap(<ReadingSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={goBack} />)
-    if (activeSub === 'custom') return wrap(<CustomTrackersSection daily={daily} onUpdate={onUpdate} profile={profile} fromHome={fromHome} onGoHome={goBack} />)
+    if (activeSub === 'wins') return wrap(<WinsSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={goBack} />)
+    if (activeSub === 'reading') return wrap(<ReadingSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={goBack} />)
+    if (activeSub === 'custom') return wrap(<CustomTrackersSection daily={daily} onUpdate={onUpdate} onToast={onToast} profile={profile} fromHome={fromHome} onGoHome={goBack} />)
   }
 
   // Default: tile grid view

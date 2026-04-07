@@ -17,7 +17,7 @@ const btn = (active, color = C.blue) => ({
 
 const DURATIONS = [5, 10, 15, 30, 60]
 
-function ReadingSection({ daily, onUpdate, fromHome, onGoHome }) {
+function ReadingSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const r = daily?.reading || {}
   const [what, setWhat] = useState(r.what || '')
   const [minutes, setMinutes] = useState(r.minutes || null)
@@ -30,9 +30,10 @@ function ReadingSection({ daily, onUpdate, fromHome, onGoHome }) {
     return "Every page counts. 📖"
   }
 
-  const save = () => {
-    onUpdate({ reading: { minutes, what } })
+  const save = async () => {
+    await onUpdate({ reading: { minutes, what } })
     setSaved(true)
+    onToast?.('📚 Reading saved!')
   }
 
   return (

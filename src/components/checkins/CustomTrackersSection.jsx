@@ -34,7 +34,7 @@ const TEMPLATE_SUGGESTIONS = [
   { name: 'Did I do laundry?', emoji: '🧺' },
 ]
 
-function CustomTrackersSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
+function CustomTrackersSection({ daily, onUpdate, onToast, profile, fromHome, onGoHome }) {
   const trackers = profile?.customTrackers || []
   const trackerStatus = daily?.customTrackers || {}
 

@@ -47,7 +47,7 @@ function calcHours(bedStr, wakeStr) {
   return Math.round(h * 10) / 10
 }
 
-function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
+function SleepSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const s = daily?.sleep || {}
   const [bedtime, setBedtime] = useState(s.bedtime || '10 PM')
   const [waketime, setWaketime] = useState(s.waketime || '7 AM')
@@ -58,9 +58,10 @@ function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
   const hours = calcHours(bedtime, waketime)
   const manicFlag = hours < 5 && quality >= 4
 
-  const save = () => {
-    onUpdate({ sleep: { bedtime, waketime, wakeups, quality, hours } })
+  const save = async () => {
+    await onUpdate({ sleep: { bedtime, waketime, wakeups, quality, hours } })
     setSaved(true)
+    onToast?.('😴 Sleep saved!')
   }
 
   return (
@@ -147,7 +148,7 @@ function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
 // ─── Meds ───────────────────────────────────────────────────────────────────
 const MED_OPTS = [{ v: true, label: 'Yes ✅' }, { v: false, label: 'Not yet' }, { v: null, label: "Don't have" }]
 
-function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
+function MedsSection({ daily, onUpdate, onToast, profile, fromHome, onGoHome }) {
   const hour = getHour()
   const showMorning = hour < 17
   const showEvening = hour >= 12
@@ -235,7 +236,7 @@ const PAIN = [
 ]
 const CRASH_TRIGGERS = ['Did too much yesterday', "Didn't sleep well", 'Stress', 'Sensory overload', 'Heat', 'Forgot to eat', 'Skipped meds', 'Other']
 
-function EnergySection({ daily, onUpdate, fromHome, onGoHome }) {
+function EnergySection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const d = daily || {}
   const [energy, setEnergy] = useState(d.energy || null)
   const [pain, setPain] = useState(d.pain || null)
@@ -248,9 +249,10 @@ function EnergySection({ daily, onUpdate, fromHome, onGoHome }) {
 
   const toggleTrigger = (t) => setTriggers(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
 
-  const save = () => {
-    onUpdate({ energy, pain, crash: { triggered: crashTriggered, triggers }, restHours, activity: { attempted: actActive, tolerance: actTolerance } })
+  const save = async () => {
+    await onUpdate({ energy, pain, crash: { triggered: crashTriggered, triggers }, restHours, activity: { attempted: actActive, tolerance: actTolerance } })
     setSaved(true)
+    onToast?.('⚡ Energy saved!')
   }
 
   return (
@@ -329,7 +331,7 @@ function EnergySection({ daily, onUpdate, fromHome, onGoHome }) {
 }
 
 // ─── Water ──────────────────────────────────────────────────────────────────
-function WaterSection({ daily, onUpdate, fromHome, onGoHome }) {
+function WaterSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const count = daily?.water?.count || 0
   const set = (n) => onUpdate({ water: { count: Math.max(0, Math.min(8, n)) } })
   return (
@@ -365,14 +367,14 @@ const SENSORY_LEVELS = [
 ]
 const SENSORY_BOTHERS = ['Noise', 'Light', 'Touch/texture', 'Smells', 'Too many people', 'Screens', 'Temperature', 'Everything']
 
-function SensorySection({ daily, onUpdate, fromHome, onGoHome }) {
+function SensorySection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const s = daily?.sensory || {}
   const [level, setLevel] = useState(s.level || null)
   const [bothering, setBothering] = useState(s.bothering || [])
   const [saved, setSaved] = useState(s.level !== undefined)
 
   const toggle = (b) => setBothering(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b])
-  const save = () => { onUpdate({ sensory: { level, bothering } }); setSaved(true) }
+  const save = async () => { await onUpdate({ sensory: { level, bothering } }); setSaved(true); onToast?.('🧠 Sensory saved!') }
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
@@ -629,16 +631,17 @@ const WINDOW_SKILLS = {
   ],
 }
 
-function WindowSection({ daily, onUpdate, fromHome, onGoHome }) {
+function WindowSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [selected, setSelected] = useState(daily?.window || null)
   const [saved, setSaved] = useState(daily?.window !== undefined)
 
   const level = WINDOW_LEVELS.find(l => l.v === selected)
   const skills = level ? WINDOW_SKILLS[level.zone] : null
 
-  const save = () => {
-    onUpdate({ window: selected })
+  const save = async () => {
+    await onUpdate({ window: selected })
     setSaved(true)
+    onToast?.('🧠 Window saved!')
   }
 
   return (
@@ -713,14 +716,15 @@ const DISSOCIATION_LEVELS = [
   { v: 4, emoji: '❤️', label: 'A lot', sub: 'I was really disconnected from myself or the world.' },
 ]
 
-function DissociationSection({ daily, onUpdate, fromHome, onGoHome }) {
+function DissociationSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [level, setLevel] = useState(daily?.dissociation || null)
   const [context, setContext] = useState(daily?.dissociationContext || '')
   const [saved, setSaved] = useState(daily?.dissociation !== undefined)
 
-  const save = () => {
-    onUpdate({ dissociation: level, dissociationContext: context.trim() })
+  const save = async () => {
+    await onUpdate({ dissociation: level, dissociationContext: context.trim() })
     setSaved(true)
+    onToast?.('🌫️ Saved!')
   }
 
   return (
@@ -803,13 +807,14 @@ const BODY_SELF_OPTIONS = [
   { v: 'dysphoric', emoji: '💔', label: 'Dysphoric', sub: 'Really struggling with my body today.' },
 ]
 
-function BodySelfSection({ daily, onUpdate, fromHome, onGoHome, profile }) {
+function BodySelfSection({ daily, onUpdate, onToast, fromHome, onGoHome, profile }) {
   const [selected, setSelected] = useState(daily?.bodySelf || null)
   const [saved, setSaved] = useState(!!daily?.bodySelf)
 
-  const save = () => {
-    onUpdate({ bodySelf: selected })
+  const save = async () => {
+    await onUpdate({ bodySelf: selected })
     setSaved(true)
+    onToast?.('💜 Body check saved!')
   }
 
   return (
@@ -1019,7 +1024,7 @@ const SUBS = [
   { key: 'more', label: '+ More' },
 ]
 
-export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome, onGoHome, focusMode }) {
+export default function BodyTab({ daily, onUpdate, profile, onToast, initialSub, fromHome, onGoHome, focusMode }) {
   const [sub, setSub] = useState(initialSub || 'sleep')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -1037,15 +1042,15 @@ export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome
         </div>
       )}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
-        {sub === 'sleep' && <SleepSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'meals' && <MealSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'meds' && <MedsSection daily={daily} onUpdate={onUpdate} profile={profile} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'energy' && <EnergySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'water' && <WaterSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'window' && <WindowSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'sensory' && <SensorySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'dissociation' && <DissociationSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} profile={profile} />}
+        {sub === 'sleep' && <SleepSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'meals' && <MealSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'meds' && <MedsSection daily={daily} onUpdate={onUpdate} onToast={onToast} profile={profile} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'energy' && <EnergySection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'water' && <WaterSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'window' && <WindowSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'sensory' && <SensorySection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'dissociation' && <DissociationSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} profile={profile} />}
         {sub === 'weekly' && <WeeklySection profile={profile} />}
         {sub === 'more' && <ClinicalCheckIns daily={daily} onUpdate={onUpdate} />}
       </div>

@@ -15,7 +15,7 @@ const btn = (active, color = C.primary) => ({
   fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44,
 })
 
-function ConnectionSection({ daily, onUpdate, fromHome, onGoHome }) {
+function ConnectionSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const c = daily?.connection || {}
   const [closeness, setCloseness] = useState(c.closeness !== undefined ? c.closeness : null)
   const [luis, setLuis] = useState(c.luis || null)
@@ -26,9 +26,10 @@ function ConnectionSection({ daily, onUpdate, fromHome, onGoHome }) {
 
   const yesCount = [closeness, laughed, seen].filter(v => v === true).length
 
-  const save = () => {
-    onUpdate({ connection: { closeness, luis, laughed, seen, note } })
+  const save = async () => {
+    await onUpdate({ connection: { closeness, luis, laughed, seen, note } })
     setSaved(true)
+    onToast?.('💜 Connections saved!')
   }
 
   return (

@@ -11,7 +11,7 @@ import ConnectionSection from '../checkins/ConnectionSection.jsx'
 
 // ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
 
-function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
+function EmotionWheel({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [expandedQuadrant, setExpandedQuadrant] = useState(null)
   const [selected, setSelected] = useState(daily?.emotions || [])
   const [emotionContext, setEmotionContext] = useState(daily?.emotionContext || '')
@@ -32,9 +32,10 @@ function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
 
   const allEmotions = EMOTION_QUADRANTS.flatMap(q => q.emotions)
 
-  const save = () => {
-    onUpdate({ emotions: selected, emotionContext: emotionContext.trim(), emotionBody: bodyLocation.trim() })
+  const save = async () => {
+    await onUpdate({ emotions: selected, emotionContext: emotionContext.trim(), emotionBody: bodyLocation.trim() })
     setSaved(true)
+    onToast?.('🎭 Feelings saved!')
   }
 
   // "I don't know" shortcut — saves immediately with special marker
@@ -316,7 +317,7 @@ const AFFIRM = {
   outer: "Green circle day! You're healing. 💚",
 }
 
-function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome, onNavigateToChain }) {
+function ThreeCircles({ daily, onUpdate, onOpenCrisis, onToast, fromHome, onGoHome, onNavigateToChain }) {
   const [journalText, setJournalText] = useState(daily?.circles?.journal || '')
   const [showJournal, setShowJournal] = useState(!!daily?.circles?.choice)
   const [secrecyAnswer, setSecrecyAnswer] = useState(daily?.secrecyTest ?? null)
@@ -325,13 +326,15 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome, onNav
 
   const needsSecrecyTest = selected === 'middle' || selected === 'inner'
 
-  const pick = (id) => {
-    onUpdate({ circles: { choice: id, journal: journalText, timestamp: Date.now() } })
+  const pick = async (id) => {
+    await onUpdate({ circles: { choice: id, journal: journalText, timestamp: Date.now() } })
     setShowJournal(true)
+    onToast?.('⭕ Circle saved!')
   }
 
-  const saveJournal = () => {
-    onUpdate({ circles: { choice: selected, journal: journalText, timestamp: Date.now() } })
+  const saveJournal = async () => {
+    await onUpdate({ circles: { choice: selected, journal: journalText, timestamp: Date.now() } })
+    onToast?.('📝 Journal saved!')
     if (needsSecrecyTest && secrecyAnswer === null) {
       setShowSecrecyTest(true)
     }
@@ -489,7 +492,7 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome, onNav
 
 // ─── DBT Skill ─────────────────────────────────────────────────────────────
 
-function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
+function DbtSkill({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const skill = useMemo(() => {
     if (daily?.dbt?.skillId) {
       return DBT_SKILLS.find(s => s.id === daily.dbt.skillId) || DBT_SKILLS[0]
@@ -623,7 +626,7 @@ function SkillCard({ skill, isExpanded, onToggle, onUse }) {
 const CONTEXTS = ['Bored', 'Lonely', 'Stressed', 'Manic energy', 'Triggered by something I saw', "Can't sleep", 'Fighting with someone', "Don't know", 'Other']
 const RESPONSES = ['Used a skill', 'Opened my toolkit', 'Called someone', 'Rode it out', 'Acted out', 'Still in it']
 
-function UrgeLogger({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
+function UrgeLogger({ daily, onUpdate, onOpenCrisis, onToast, fromHome, onGoHome }) {
   const [logging, setLogging] = useState(false)
   const [intensity, setIntensity] = useState(null)
   const [context, setContext] = useState(null)
@@ -646,11 +649,12 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
     if (!response) setResponse('Used a skill')
   }
 
-  const save = () => {
+  const save = async () => {
     const entry = { timestamp: Date.now(), intensity, context, response, skillUsed }
     const next = [...urges, entry]
-    onUpdate({ urges: next })
+    await onUpdate({ urges: next })
     setSaved(true)
+    onToast?.('🔴 Urge logged!')
     if (response === 'Still in it') {
       onOpenCrisis()
     }
@@ -819,7 +823,7 @@ const CONSEQUENCES = [
   'Told someone', 'Used a skill', 'Went to sleep', 'Other',
 ]
 
-function ChainAnalysis({ daily, onUpdate, fromHome, onGoHome }) {
+function ChainAnalysis({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [step, setStep] = useState(0)
   const [vulnerability, setVulnerability] = useState([])
   const [promptingEvent, setPromptingEvent] = useState('')
@@ -843,7 +847,7 @@ function ChainAnalysis({ daily, onUpdate, fromHome, onGoHome }) {
 
   const allEmotions = EMOTION_QUADRANTS.flatMap(q => q.emotions)
 
-  const save = () => {
+  const save = async () => {
     const entry = {
       timestamp: Date.now(),
       vulnerability,
@@ -854,8 +858,9 @@ function ChainAnalysis({ daily, onUpdate, fromHome, onGoHome }) {
       secrecy,
     }
     const chains = [...(daily?.chains || []), entry]
-    onUpdate({ chains })
+    await onUpdate({ chains })
     setSaved(true)
+    onToast?.('🔗 Chain analysis saved!')
   }
 
   const existingChains = daily?.chains || []
@@ -1140,7 +1145,7 @@ const REFLECTION_FEELINGS = [
   { v: 'struggling', emoji: '❤️', label: 'Still struggling' },
 ]
 
-function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
+function UrgeReflection({ daily, onUpdate, onOpenCrisis, onToast }) {
   const [feeling, setFeeling] = useState(daily?.urgeReflection?.feeling || null)
   const [whatDifferently, setWhatDifferently] = useState(daily?.urgeReflection?.whatDifferently || '')
   const [saved, setSaved] = useState(!!daily?.urgeReflection?.feeling)
@@ -1176,9 +1181,10 @@ function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
 
   if (!urgeToReflect || saved) return null
 
-  const save = () => {
-    onUpdate({ urgeReflection: { forUrgeTimestamp: urgeToReflect.timestamp, feeling, whatDifferently: whatDifferently.trim() } })
+  const save = async () => {
+    await onUpdate({ urgeReflection: { forUrgeTimestamp: urgeToReflect.timestamp, feeling, whatDifferently: whatDifferently.trim() } })
     setSaved(true)
+    onToast?.('💛 Reflection saved!')
     if (feeling === 'struggling') onOpenCrisis()
   }
 
@@ -1247,7 +1253,7 @@ function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
 const SUBS = ['circles', 'feelings', 'dbt', 'urges', 'chain', 'connection']
 const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT', urges: '🔴 Urges', chain: '🔗 Chain', connection: '💜 Connect' }
 
-export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub, fromHome, onGoHome, focusMode }) {
+export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, onToast, initialSub, fromHome, onGoHome, focusMode }) {
   const [sub, setSub] = useState(initialSub || 'circles')
 
   return (
@@ -1273,13 +1279,13 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub,
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
         {/* 24-hour urge reflection — shows at top of urges tab */}
-        {sub === 'urges' && <UrgeReflection daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
-        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} onNavigateToChain={() => setSub('chain')} />}
-        {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'chain' && <ChainAnalysis daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
-        {sub === 'connection' && <ConnectionSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'urges' && <UrgeReflection daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} onToast={onToast} />}
+        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} onNavigateToChain={() => setSub('chain')} />}
+        {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'chain' && <ChainAnalysis daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'connection' && <ConnectionSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={onGoHome} />}
       </div>
     </div>
   )

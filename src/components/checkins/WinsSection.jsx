@@ -20,16 +20,17 @@ const card = {
   marginBottom: 14,
 }
 
-function WinsSection({ daily, onUpdate, fromHome, onGoHome }) {
+function WinsSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [winText, setWinText] = useState(daily?.win || '')
   const [saved, setSaved] = useState(!!daily?.win)
   const [isEditing, setIsEditing] = useState(false)
 
-  const save = () => {
+  const save = async () => {
     const trimmedWin = winText.trim()
-    onUpdate({ win: trimmedWin })
+    await onUpdate({ win: trimmedWin })
     setSaved(true)
     setIsEditing(false)
+    onToast?.('🌟 Win saved!')
   }
 
   if (saved && winText && !isEditing) {

@@ -23,7 +23,7 @@ function getTip() {
   return tips[idx]
 }
 
-function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
+function DogSection({ dog, dogKey, daily, onUpdate, onToast, phase }) {
   const skills = useMemo(() => getDailySkills(phase, dogKey), [phase, dogKey])
   const dogData = daily?.puppies?.[dogKey] || {}
   const practised = dogData.skills || {}
@@ -37,7 +37,7 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
     save({ skills: next })
   }
   const setTrainer = (t) => save({ trainer: t })
-  const saveNotes = () => save({ notes })
+  const saveNotes = async () => { await save({ notes }); onToast?.('🐾 Notes saved!') }
   const addTrigger = () => {
     if (!newTrigger.what) return
     const next = [...triggers, { ...newTrigger, date: today() }]
@@ -46,9 +46,9 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
     setNewTrigger({ what: '', distance: '', reaction: 3 })
   }
 
-  const save = (patch) => {
+  const save = async (patch) => {
     const puppies = { ...(daily?.puppies || {}), [dogKey]: { ...(daily?.puppies?.[dogKey] || {}), ...patch } }
-    onUpdate({ puppies })
+    return onUpdate({ puppies })
   }
 
   const doneCount = skills.filter(s => practised[s.id]).length
@@ -258,7 +258,7 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
   )
 }
 
-export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, fromHome, onGoHome }) {
+export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, onToast, fromHome, onGoHome }) {
   const [activeDog, setActiveDog] = useState('apollo')
   const phase = profile?.puppyPhase || 1
   const phaseData = PUPPY_DATA.phases.find(p => p.phase === phase)
@@ -375,6 +375,7 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
           dogKey={activeDog}
           daily={daily}
           onUpdate={onUpdate}
+          onToast={onToast}
           phase={phase}
         />
       </div>

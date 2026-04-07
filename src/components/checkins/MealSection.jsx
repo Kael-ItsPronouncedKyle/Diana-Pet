@@ -15,7 +15,7 @@ const btn = (active, color = C.accent) => ({
   fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44, flex: 1,
 })
 
-function MealSection({ daily, onUpdate, fromHome, onGoHome }) {
+function MealSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const m = daily?.meals || {}
   const [breakfast, setBreakfast] = useState(m.breakfast || false)
   const [lunch, setLunch] = useState(m.lunch || false)

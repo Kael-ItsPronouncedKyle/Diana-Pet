@@ -4,10 +4,11 @@ import { EMOTION_QUADRANTS } from '../../constants/emotions.js'
 import { CONTEXT_SKILL_MAP } from '../../constants/skillMap.js'
 import { today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
+import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 
 // ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
 
-function EmotionWheel({ daily, onUpdate }) {
+function EmotionWheel({ daily, onUpdate, fromHome, onGoHome }) {
   const [expandedQuadrant, setExpandedQuadrant] = useState(null)
   const [selected, setSelected] = useState(daily?.emotions || [])
   const [emotionContext, setEmotionContext] = useState(daily?.emotionContext || '')
@@ -32,6 +33,7 @@ function EmotionWheel({ daily, onUpdate }) {
   if (saved && selected.length > 0) {
     return (
       <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <BackToHomeBanner show={fromHome} onGoHome={onGoHome} />
         <div style={{ background: '#E8F4F1', borderRadius: 20, padding: '20px', border: '2px solid #6BA89E', textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>💚</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: '#3D3535', marginBottom: 12 }}>
@@ -196,7 +198,7 @@ const AFFIRM = {
   outer: "Green circle day! You're healing. 💚",
 }
 
-function ThreeCircles({ daily, onUpdate, onOpenCrisis }) {
+function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
   const [journalText, setJournalText] = useState(daily?.circles?.journal || '')
   const [showJournal, setShowJournal] = useState(!!daily?.circles?.choice)
   const [secrecyAnswer, setSecrecyAnswer] = useState(daily?.secrecyTest ?? null)
@@ -231,8 +233,11 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis }) {
 
   const circle = CIRCLES.find(c => c.id === selected)
 
+  const circlesDone = selected && (!needsSecrecyTest || secrecyAnswer !== null)
+
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={circlesDone && fromHome} onGoHome={onGoHome} />
       <p style={{ fontSize: 15, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.5 }}>
         Where are you at today? No wrong answers.
       </p>
@@ -342,7 +347,7 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis }) {
 
 // ─── DBT Skill ─────────────────────────────────────────────────────────────
 
-function DbtSkill({ daily, onUpdate }) {
+function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
   const skill = useMemo(() => {
     if (daily?.dbt?.skillId) {
       return DBT_SKILLS.find(s => s.id === daily.dbt.skillId) || DBT_SKILLS[0]
@@ -371,6 +376,7 @@ function DbtSkill({ daily, onUpdate }) {
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={practiced && fromHome} onGoHome={onGoHome} />
       <div style={{ background: 'white', borderRadius: 20, padding: '20px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 12 }}>
         <div style={{ display: 'inline-block', background: catColor + '22', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 800, color: catColor, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {skill.category.replace('-', ' ')}
@@ -448,7 +454,7 @@ function SkillCard({ skill, isExpanded, onToggle, onUse }) {
 const CONTEXTS = ['Bored', 'Lonely', 'Stressed', 'Manic energy', 'Triggered by something I saw', "Can't sleep", 'Fighting with someone', "Don't know", 'Other']
 const RESPONSES = ['Used a skill', 'Called someone', 'Rode it out', 'Acted out', 'Still in it']
 
-function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
+function UrgeLogger({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
   const [logging, setLogging] = useState(false)
   const [intensity, setIntensity] = useState(null)
   const [context, setContext] = useState(null)
@@ -633,21 +639,425 @@ function UrgeLogger({ daily, onUpdate, onOpenCrisis }) {
   )
 }
 
+// ─── Chain Analysis (T1-02) ─────────────────────────────────────────────────
+
+const VULNERABILITY_FACTORS = [
+  "Didn't sleep well", 'Skipped meds', 'Fight with Luis', 'Lonely', 'Bored',
+  'Pain', 'Sensory overload', 'Felt disconnected', 'Hormonal', 'Skipped meals', 'Other',
+]
+const CONSEQUENCES = [
+  'Felt worse', 'Felt numb', 'Felt relieved then guilty', 'Hid it',
+  'Told someone', 'Used a skill', 'Went to sleep', 'Other',
+]
+
+function ChainAnalysis({ daily, onUpdate, fromHome, onGoHome }) {
+  const [step, setStep] = useState(0)
+  const [vulnerability, setVulnerability] = useState([])
+  const [promptingEvent, setPromptingEvent] = useState('')
+  const [emotions, setEmotions] = useState([])
+  const [thoughts, setThoughts] = useState('')
+  const [consequences, setConsequences] = useState([])
+  const [secrecy, setSecrecy] = useState(null)
+  const [saved, setSaved] = useState(false)
+
+  const toggleItem = (list, setList, item) => {
+    setList(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item])
+  }
+
+  const toggleEmotion = (id) => {
+    setEmotions(prev => {
+      if (prev.includes(id)) return prev.filter(e => e !== id)
+      if (prev.length >= 3) return prev
+      return [...prev, id]
+    })
+  }
+
+  const allEmotions = EMOTION_QUADRANTS.flatMap(q => q.emotions)
+
+  const save = () => {
+    const entry = {
+      timestamp: Date.now(),
+      vulnerability,
+      promptingEvent: promptingEvent.trim(),
+      emotions,
+      thoughts: thoughts.trim(),
+      consequences,
+      secrecy,
+    }
+    const chains = [...(daily?.chains || []), entry]
+    onUpdate({ chains })
+    setSaved(true)
+  }
+
+  const existingChains = daily?.chains || []
+
+  if (saved) {
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <BackToHomeBanner show={fromHome} onGoHome={onGoHome} />
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💚</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#3D3535', lineHeight: 1.4 }}>
+            You just looked at what happened — honestly. That takes real courage.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show start prompt if no chain in progress
+  if (step === 0 && !saved) {
+    return (
+      <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+        <div style={{ background: 'white', borderRadius: 20, padding: '20px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: '#3D3535', marginBottom: 8 }}>Chain Analysis</div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', lineHeight: 1.5, marginBottom: 16 }}>
+            This helps you understand what led up to a behavior — not to blame yourself, but to learn. We'll go step by step.
+          </p>
+          <button
+            onClick={() => setStep(1)}
+            style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 16, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Start a chain analysis
+          </button>
+        </div>
+
+        {existingChains.length > 0 && (
+          <div style={{ background: 'white', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#8A7F7F', marginBottom: 10 }}>PAST CHAINS ({existingChains.length})</div>
+            {existingChains.slice(-3).map((c, i) => (
+              <div key={i} style={{ padding: '10px 0', borderBottom: i < existingChains.slice(-3).length - 1 ? '1px solid #F0E8E0' : 'none' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#3D3535' }}>
+                  {c.vulnerability?.slice(0, 2).join(', ')} {c.vulnerability?.length > 2 ? `+${c.vulnerability.length - 2} more` : ''}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#8A7F7F', marginTop: 2 }}>
+                  {c.consequences?.join(', ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const chipStyle = (active, color = '#6BA89E') => ({
+    padding: '10px 16px', borderRadius: 20, border: 'none',
+    background: active ? color : '#F0E8E0',
+    color: active ? 'white' : '#3D3535',
+    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  })
+
+  const nextBtn = (disabled = false) => (
+    <button
+      onClick={() => setStep(s => s + 1)}
+      disabled={disabled}
+      style={{
+        width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+        background: disabled ? '#E0E0E0' : '#6BA89E', color: 'white',
+        fontSize: 15, fontWeight: 800, cursor: disabled ? 'not-allowed' : 'pointer', marginTop: 16,
+      }}
+    >
+      Next →
+    </button>
+  )
+
+  const stepCard = (title, stepNum, totalSteps, content) => (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#8A7F7F' }}>STEP {stepNum} OF {totalSteps}</div>
+        <button onClick={() => setStep(s => s - 1)} style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>← Back</button>
+      </div>
+      <div style={{ background: 'white', borderRadius: 20, padding: '18px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 14 }}>{title}</div>
+        {content}
+      </div>
+    </div>
+  )
+
+  const totalSteps = 6
+
+  if (step === 1) return stepCard('What made you more vulnerable?', 1, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12, lineHeight: 1.4 }}>
+        Pick anything that was going on before it happened.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {VULNERABILITY_FACTORS.map(v => (
+          <button key={v} onClick={() => toggleItem(vulnerability, setVulnerability, v)} style={chipStyle(vulnerability.includes(v))}>
+            {v}
+          </button>
+        ))}
+      </div>
+      {nextBtn(vulnerability.length === 0)}
+    </>
+  ))
+
+  if (step === 2) return stepCard('What started it?', 2, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12, lineHeight: 1.4 }}>
+        What happened right before? You can type or use voice-to-text.
+      </p>
+      <textarea
+        value={promptingEvent}
+        onChange={e => setPromptingEvent(e.target.value)}
+        placeholder="Something happened, or maybe nothing specific..."
+        rows={3}
+        style={{
+          width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+          fontSize: 14, fontWeight: 600, background: 'white', color: '#3D3535',
+          resize: 'none', outline: 'none', boxSizing: 'border-box',
+        }}
+      />
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <button onClick={() => setStep(s => s + 1)} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+          Next →
+        </button>
+        <button onClick={() => { setPromptingEvent(''); setStep(s => s + 1) }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          Skip
+        </button>
+      </div>
+    </>
+  ))
+
+  if (step === 3) return stepCard('What were you feeling?', 3, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12, lineHeight: 1.4 }}>
+        Pick up to 3 emotions.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+        {EMOTION_QUADRANTS.map(q => (
+          <div key={q.id}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: q.color, marginBottom: 6 }}>{q.emoji} {q.label}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {q.emotions.map(em => {
+                const isSelected = emotions.includes(em.id)
+                const canSelect = isSelected || emotions.length < 3
+                return (
+                  <button key={em.id} onClick={() => canSelect && toggleEmotion(em.id)} style={{
+                    padding: '8px 14px', borderRadius: 16,
+                    background: isSelected ? q.color : '#F8F4F0',
+                    color: isSelected ? 'white' : '#3D3535',
+                    border: 'none', fontSize: 13, fontWeight: 700,
+                    cursor: canSelect ? 'pointer' : 'default', opacity: canSelect ? 1 : 0.5,
+                  }}>
+                    {em.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {nextBtn(emotions.length === 0)}
+    </>
+  ))
+
+  if (step === 4) return stepCard('What thoughts were going through your mind?', 4, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12, lineHeight: 1.4 }}>
+        What was your brain telling you? This is optional.
+      </p>
+      <textarea
+        value={thoughts}
+        onChange={e => setThoughts(e.target.value)}
+        placeholder="I was thinking..."
+        rows={3}
+        style={{
+          width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+          fontSize: 14, fontWeight: 600, background: 'white', color: '#3D3535',
+          resize: 'none', outline: 'none', boxSizing: 'border-box',
+        }}
+      />
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <button onClick={() => setStep(s => s + 1)} style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+          Next →
+        </button>
+        <button onClick={() => { setThoughts(''); setStep(s => s + 1) }} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          Skip
+        </button>
+      </div>
+    </>
+  ))
+
+  if (step === 5) return stepCard('What happened after?', 5, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 12, lineHeight: 1.4 }}>
+        Pick anything that describes what came next.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {CONSEQUENCES.map(c => (
+          <button key={c} onClick={() => toggleItem(consequences, setConsequences, c)} style={chipStyle(consequences.includes(c))}>
+            {c}
+          </button>
+        ))}
+      </div>
+      {nextBtn(consequences.length === 0)}
+    </>
+  ))
+
+  if (step === 6) return stepCard('Would you show this to Luis?', 6, totalSteps, (
+    <>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.4 }}>
+        This isn't about right or wrong. It's about noticing secrecy.
+      </p>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button onClick={() => setSecrecy(true)} style={{
+          flex: 1, padding: '16px', borderRadius: 14, border: `2px solid ${secrecy === true ? '#6BBF8A' : '#F0E8E0'}`,
+          background: secrecy === true ? '#E6F7EC' : 'white', color: '#3D3535',
+          fontSize: 16, fontWeight: 800, cursor: 'pointer',
+        }}>
+          Yes
+        </button>
+        <button onClick={() => setSecrecy(false)} style={{
+          flex: 1, padding: '16px', borderRadius: 14, border: `2px solid ${secrecy === false ? '#E87B7B' : '#F0E8E0'}`,
+          background: secrecy === false ? '#FDECEC' : 'white', color: '#3D3535',
+          fontSize: 16, fontWeight: 800, cursor: 'pointer',
+        }}>
+          No
+        </button>
+      </div>
+      {secrecy === false && (
+        <div style={{ background: '#FDE8E4', borderRadius: 14, padding: '14px 16px', border: '2px solid #E8907E', marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, margin: 0 }}>
+            Secrets are where addiction lives. You don't have to share right now — but noticing the urge to hide is important.
+          </p>
+        </div>
+      )}
+      {secrecy === true && (
+        <div style={{ background: '#E6F7EC', borderRadius: 14, padding: '14px 16px', border: '2px solid #6BBF8A', marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, margin: 0 }}>
+            Openness is part of healing. That's courage. 💚
+          </p>
+        </div>
+      )}
+      <button
+        onClick={save}
+        disabled={secrecy === null}
+        style={{
+          width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+          background: secrecy !== null ? '#6BA89E' : '#E0E0E0', color: 'white',
+          fontSize: 15, fontWeight: 800, cursor: secrecy !== null ? 'pointer' : 'not-allowed',
+        }}
+      >
+        Save chain analysis ✓
+      </button>
+    </>
+  ))
+
+  return null
+}
+
+// ─── 24-Hour Urge Reflection (T1-13) ────────────────────────────────────────
+
+const REFLECTION_FEELINGS = [
+  { v: 'proud', emoji: '💚', label: 'Proud of myself' },
+  { v: 'mixed', emoji: '💛', label: 'Mixed feelings' },
+  { v: 'wish_different', emoji: '🧡', label: "I wish I'd done something different" },
+  { v: 'struggling', emoji: '❤️', label: 'Still struggling' },
+]
+
+function UrgeReflection({ daily, onUpdate, onOpenCrisis }) {
+  const [feeling, setFeeling] = useState(daily?.urgeReflection?.feeling || null)
+  const [whatDifferently, setWhatDifferently] = useState(daily?.urgeReflection?.whatDifferently || '')
+  const [saved, setSaved] = useState(!!daily?.urgeReflection?.feeling)
+
+  // Check if there's an urge from ~24h ago (20-28h window)
+  const urgeToReflect = useMemo(() => {
+    const urges = daily?.urges || []
+    // Also check yesterday's data — but we only have today's daily
+    // So check urges from earlier today that are old enough, or rely on timestamps
+    const now = Date.now()
+    return urges.find(u => {
+      const age = now - u.timestamp
+      const hours = age / (1000 * 60 * 60)
+      return hours >= 20 && hours <= 28
+    })
+  }, [daily?.urges])
+
+  if (!urgeToReflect || saved) return null
+
+  const save = () => {
+    onUpdate({ urgeReflection: { forUrgeTimestamp: urgeToReflect.timestamp, feeling, whatDifferently: whatDifferently.trim() } })
+    setSaved(true)
+    if (feeling === 'struggling') onOpenCrisis()
+  }
+
+  return (
+    <div style={{ background: '#FFF8E1', borderRadius: 20, padding: '18px', border: '2px solid #F0C050', marginBottom: 16, animation: 'fade-up 0.2s ease-out' }}>
+      <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 6 }}>Looking back on yesterday's urge...</div>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#8A7F7F', marginBottom: 14, lineHeight: 1.4 }}>
+        You logged an urge about 24 hours ago. How are you feeling about it now?
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+        {REFLECTION_FEELINGS.map(f => (
+          <button key={f.v} onClick={() => setFeeling(f.v)} style={{
+            padding: '12px 16px', borderRadius: 14,
+            border: `2px solid ${feeling === f.v ? '#F0C050' : '#F0E8E0'}`,
+            background: feeling === f.v ? '#FFF8E1' : 'white',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+          }}>
+            <span style={{ fontSize: 20 }}>{f.emoji}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#3D3535' }}>{f.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {feeling === 'wish_different' && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#8A7F7F', marginBottom: 6 }}>What would you do differently? (optional)</div>
+          <textarea
+            value={whatDifferently}
+            onChange={e => setWhatDifferently(e.target.value)}
+            placeholder="Next time I could..."
+            rows={2}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+              fontSize: 14, fontWeight: 600, background: 'white', color: '#3D3535',
+              resize: 'none', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+      )}
+
+      {feeling === 'struggling' && (
+        <div style={{ background: '#FDE8E4', borderRadius: 14, padding: '12px 16px', border: '2px solid #E8907E', marginBottom: 14 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5, margin: 0 }}>
+            You're not alone in this. Your safety plan and coping plan are here for you. 💙
+          </p>
+        </div>
+      )}
+
+      <button
+        onClick={save}
+        disabled={!feeling}
+        style={{
+          width: '100%', padding: '12px', borderRadius: 14, border: 'none',
+          background: feeling ? '#F0C050' : '#E0E0E0', color: feeling ? '#3D3535' : 'white',
+          fontSize: 14, fontWeight: 800, cursor: feeling ? 'pointer' : 'not-allowed',
+        }}
+      >
+        Save reflection ✓
+      </button>
+    </div>
+  )
+}
+
 // ─── Main Tab ──────────────────────────────────────────────────────────────
 
-const SUBS = ['circles', 'feelings', 'dbt', 'urges']
-const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT Skill', urges: '🔴 Urges' }
+const SUBS = ['circles', 'feelings', 'dbt', 'urges', 'chain']
+const SUB_LABELS = { circles: '⭕ Circles', feelings: '🎭 Feelings', dbt: '💚 DBT', urges: '🔴 Urges', chain: '🔗 Chain' }
 
-export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub }) {
+export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub, fromHome, onGoHome }) {
   const [sub, setSub] = useState(initialSub || 'circles')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Sub-tab bar */}
-      <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0' }}>
+      <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {SUBS.map(s => (
           <button key={s} onClick={() => setSub(s)} style={{
-            flex: 1, padding: '10px 4px', borderRadius: 14, border: 'none',
+            padding: '10px 10px', borderRadius: 14, border: 'none', whiteSpace: 'nowrap',
             background: sub === s ? '#6BA89E' : '#F0E8E0',
             color: sub === s ? 'white' : '#3D3535',
             fontSize: 12, fontWeight: 800, cursor: 'pointer',
@@ -658,10 +1068,13 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub 
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
-        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
-        {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} />}
-        {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} />}
-        {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
+        {/* 24-hour urge reflection — shows at top of urges tab */}
+        {sub === 'urges' && <UrgeReflection daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} />}
+        {sub === 'circles' && <ThreeCircles daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'feelings' && <EmotionWheel daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'dbt' && <DbtSkill daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'urges' && <UrgeLogger daily={daily} onUpdate={onUpdate} onOpenCrisis={onOpenCrisis} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'chain' && <ChainAnalysis daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
       </div>
     </div>
   )

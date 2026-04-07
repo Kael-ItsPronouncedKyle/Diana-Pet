@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 
-const SECTIONS = ['safety-plan', 'grounding', 'breathe', 'tipp', 'urge-surfing', 'safe-message', 'contacts']
+const SECTIONS = ['safety-plan', 'coping-plan', 'grounding', 'breathe', 'tipp', 'urge-surfing', 'safe-message', 'contacts']
 const SECTION_LABELS = {
   'safety-plan': '🛡️ My Safety Plan',
+  'coping-plan': '📋 My Coping Plan',
   grounding: '🌱 Grounding',
   breathe: '🫁 Box Breathing',
   tipp: '🧊 TIPP: Ice Dive',
@@ -118,7 +119,88 @@ function SafetyPlanDisplay({ safetyPlan }) {
   )
 }
 
-export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, safetyPlan = null }) {
+// ─── Coping Plan (T1-08) ────────────────────────────────────────────────────
+const COPING_FIELDS = [
+  { key: 'urge', label: 'When I feel an urge, I will:', placeholder: 'e.g. call Kael, do ice dive, go for a walk...' },
+  { key: 'cantSleep', label: "When I can't sleep, I will:", placeholder: 'e.g. paced breathing, progressive relaxation...' },
+  { key: 'sensoryOverload', label: "When I'm in sensory overload, I will:", placeholder: 'e.g. go to a quiet room, put on headphones...' },
+  { key: 'disconnected', label: 'When I feel disconnected from my body, I will:', placeholder: 'e.g. hold ice, warm water on hands, 5-4-3-2-1...' },
+  { key: 'hiding', label: 'When I want to hide something from Luis, I will:', placeholder: 'e.g. tell Kael first, write it down, open this app...' },
+  { key: 'reason', label: "The reason I'm doing this work is:", placeholder: 'e.g. because I want to be free, because I deserve better...' },
+]
+
+function CopingPlanSection({ copingPlan, onSave }) {
+  const hasPlan = copingPlan && Object.values(copingPlan).some(v => v && v.trim())
+  const [editing, setEditing] = useState(!hasPlan)
+  const [values, setValues] = useState(copingPlan || {})
+
+  const set = (key, val) => setValues(prev => ({ ...prev, [key]: val }))
+
+  const save = () => {
+    onSave(values)
+    setEditing(false)
+  }
+
+  if (!editing && hasPlan) {
+    return (
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.5 }}>
+          You wrote this plan for yourself. Read it when you need it most.
+        </p>
+        {COPING_FIELDS.map(f => {
+          const val = copingPlan[f.key]
+          if (!val || !val.trim()) return null
+          return (
+            <div key={f.key} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#6BA89E', marginBottom: 4 }}>{f.label}</div>
+              <div style={{ background: '#F8F4F0', borderRadius: 14, padding: '12px 16px', fontSize: 15, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
+                {val}
+              </div>
+            </div>
+          )
+        })}
+        <button
+          onClick={() => setEditing(true)}
+          style={{ width: '100%', padding: '12px', borderRadius: 14, border: '2px solid #F0E8E0', background: 'white', color: '#8A7F7F', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}
+        >
+          Edit my plan
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 14, fontWeight: 600, color: '#8A7F7F', marginBottom: 16, lineHeight: 1.5 }}>
+        {hasPlan ? 'Update your coping plan.' : "Let's build your coping plan. Fill in what works for YOU. You can use voice-to-text."}
+      </p>
+      {COPING_FIELDS.map(f => (
+        <div key={f.key} style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#3D3535', marginBottom: 6 }}>{f.label}</div>
+          <textarea
+            value={values[f.key] || ''}
+            onChange={e => set(f.key, e.target.value)}
+            placeholder={f.placeholder}
+            rows={2}
+            style={{
+              width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+              fontSize: 14, fontWeight: 600, background: 'white', color: '#3D3535',
+              resize: 'none', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+      ))}
+      <button
+        onClick={save}
+        style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#6BA89E', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
+      >
+        Save my plan ✓
+      </button>
+    </div>
+  )
+}
+
+export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, safetyPlan = null, copingPlan = null, onSaveCopingPlan }) {
   const [activeSection, setActiveSection] = useState('safety-plan')
 
   if (!isOpen) return null
@@ -137,6 +219,8 @@ export default function CrisisToolkit({ isOpen, onClose, crisisContacts = {}, sa
     switch (activeSection) {
       case 'safety-plan':
         return <SafetyPlanDisplay safetyPlan={safetyPlan} />
+      case 'coping-plan':
+        return <CopingPlanSection copingPlan={copingPlan} onSave={onSaveCopingPlan} />
       case 'grounding':
         return (
           <div style={{ lineHeight: 1.6 }}>

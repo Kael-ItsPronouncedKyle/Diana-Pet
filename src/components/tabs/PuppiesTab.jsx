@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { PUPPY_DATA } from '../../constants/puppyData.js'
 import { today } from '../../utils/dates.js'
+import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -134,7 +135,7 @@ function DogSection({ dog, dogKey, daily, onUpdate, phase }) {
   )
 }
 
-export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate }) {
+export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, fromHome, onGoHome }) {
   const [activeDog, setActiveDog] = useState('apollo')
   const phase = profile?.puppyPhase || 1
   const phaseData = PUPPY_DATA.phases.find(p => p.phase === phase)
@@ -178,6 +179,7 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate }
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px', animation: 'fade-up 0.25s ease-out' }}>
+        <BackToHomeBanner show={fromHome && !!(daily?.puppies?.apollo?.skills && Object.keys(daily.puppies.apollo.skills).length > 0)} onGoHome={onGoHome} />
         <DogSection
           dog={PUPPY_DATA.dogs[activeDog]}
           dogKey={activeDog}

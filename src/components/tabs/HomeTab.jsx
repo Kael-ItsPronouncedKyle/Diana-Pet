@@ -14,6 +14,7 @@ const TIME_FLOWS = {
       { key: 'sleep', label: '😴 Sleep check-in', tab: 'body', sub: 'sleep' },
       { key: 'meds', label: '💊 Morning meds', tab: 'body', sub: 'meds' },
       { key: 'energy', label: '⚡ Energy level', tab: 'body', sub: 'energy' },
+      { key: 'window', label: '🧠 Window of tolerance', tab: 'body', sub: 'window' },
       { key: 'feelings', label: '🎭 Feelings check-in', tab: 'recovery', sub: 'feelings' },
       { key: 'word', label: '📖 Word of the Day', tab: null, sub: 'word' },
     ],
@@ -36,6 +37,8 @@ const TIME_FLOWS = {
       { key: 'feelings', label: '🎭 Feelings check-in', tab: 'recovery', sub: 'feelings' },
       { key: 'meds', label: '💊 Evening meds', tab: 'body', sub: 'meds' },
       { key: 'sensory', label: '🧠 Sensory load check', tab: 'body', sub: 'sensory' },
+      { key: 'dissociation', label: '🌫 Dissociation check', tab: 'body', sub: 'dissociation' },
+      { key: 'bodySelf', label: '💜 Body-self check', tab: 'body', sub: 'bodySelf' },
       { key: 'puppies', label: '🐾 Puppy training', tab: 'puppies', sub: null },
       { key: 'water', label: '💧 Water count', tab: 'body', sub: 'water' },
     ],
@@ -62,6 +65,9 @@ function isDone(key, daily) {
   if (key === 'puppies') return !!(daily.puppies?.apollo?.skills && Object.keys(daily.puppies.apollo.skills).length > 0)
   if (key === 'word') return !!daily.wordOfDay?.learned
   if (key === 'feelings') return daily.emotions && daily.emotions.length > 0
+  if (key === 'window') return daily.window !== undefined
+  if (key === 'dissociation') return daily.dissociation !== undefined
+  if (key === 'bodySelf') return !!daily.bodySelf
   return false
 }
 
@@ -150,7 +156,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage }) 
   const checkInCount = countCheckIns(daily)
   const creatureName = profile?.creatureName || 'Friend'
 
-  const allSections = ['circles', 'feelings', 'sleep', 'meds', 'energy', 'water', 'dbt', 'sensory', 'puppies', 'word']
+  const allSections = ['circles', 'feelings', 'sleep', 'meds', 'energy', 'water', 'dbt', 'sensory', 'puppies', 'word', 'window', 'dissociation', 'bodySelf']
   const doneCount = allSections.filter(k => isDone(k, daily)).length
   const allDone = doneCount === allSections.length
 
@@ -235,6 +241,9 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage }) 
             { key: 'feelings', label: 'Feelings', emoji: '🎭' },
             { key: 'dbt', label: 'DBT', emoji: '💚' },
             { key: 'sensory', label: 'Sensory', emoji: '🧠' },
+            { key: 'window', label: 'Window', emoji: '🧠' },
+            { key: 'dissociation', label: 'Dissoc.', emoji: '🌫' },
+            { key: 'bodySelf', label: 'Body-Self', emoji: '💜' },
             { key: 'puppies', label: 'Puppies', emoji: '🐾' },
             { key: 'word', label: 'Word', emoji: '📖' },
           ].map(s => {

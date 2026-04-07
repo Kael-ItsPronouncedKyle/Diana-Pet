@@ -15,6 +15,9 @@ export function countCheckIns(daily) {
   if (daily.dbt?.practiced) n++
   if (daily.sensory?.level !== undefined && daily.sensory?.level !== null) n++
   if (daily.puppies?.apollo?.skills && Object.keys(daily.puppies.apollo.skills).length > 0) n++
+  if (daily.window !== undefined && daily.window !== null) n++
+  if (daily.dissociation !== undefined && daily.dissociation !== null) n++
+  if (daily.bodySelf) n++
   return n
 }
 

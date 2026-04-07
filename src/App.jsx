@@ -39,6 +39,7 @@ export default function App() {
   const [daily, setDaily] = useState({})
   const [tab, setTab] = useState('home')
   const [subView, setSubView] = useState(null)
+  const [fromHome, setFromHome] = useState(false)
   const [showCrisis, setShowCrisis] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [eventMessage, setEventMessage] = useState(null)
@@ -140,6 +141,12 @@ export default function App() {
     })
   }, [profile, updateStreak])
 
+  const goHome = useCallback(() => {
+    setTab('home')
+    setSubView(null)
+    setFromHome(false)
+  }, [])
+
   // Navigation handler used by HomeTab and other tabs
   const handleNavigate = useCallback((targetTab, targetSub) => {
     if (targetTab === '__updateDaily') {
@@ -147,9 +154,12 @@ export default function App() {
       updateDaily(targetSub)
       return
     }
+    if (tab === 'home' && targetTab !== 'home') {
+      setFromHome(true)
+    }
     setTab(targetTab)
     setSubView(targetSub || null)
-  }, [updateDaily])
+  }, [updateDaily, tab])
 
   // Onboarding complete
   const handleOnboardingComplete = async (profileData) => {
@@ -196,6 +206,8 @@ export default function App() {
             onUpdate={updateDaily}
             onOpenCrisis={() => setShowCrisis(true)}
             initialSub={subView}
+            fromHome={fromHome}
+            onGoHome={goHome}
           />
         )
       case 'body':
@@ -205,6 +217,8 @@ export default function App() {
             onUpdate={updateDaily}
             profile={profile}
             initialSub={subView}
+            fromHome={fromHome}
+            onGoHome={goHome}
           />
         )
       case 'puppies':
@@ -214,6 +228,8 @@ export default function App() {
             onUpdate={updateDaily}
             profile={profile}
             onProfileUpdate={updateProfile}
+            fromHome={fromHome}
+            onGoHome={goHome}
           />
         )
       case 'week':
@@ -261,7 +277,7 @@ export default function App() {
       </div>
 
       {/* Bottom navigation */}
-      <BottomNav activeTab={tab} onTabChange={(t) => { setTab(t); setSubView(null) }} />
+      <BottomNav activeTab={tab} onTabChange={(t) => { setTab(t); setSubView(null); setFromHome(false) }} />
 
       {/* Modals */}
       <CrisisToolkit
@@ -269,6 +285,8 @@ export default function App() {
         onClose={() => setShowCrisis(false)}
         crisisContacts={profile.crisisContacts || {}}
         safetyPlan={profile.safetyPlan || null}
+        copingPlan={profile.copingPlan || null}
+        onSaveCopingPlan={(plan) => updateProfile({ copingPlan: plan })}
       />
       <SettingsModal
         isOpen={showSettings}

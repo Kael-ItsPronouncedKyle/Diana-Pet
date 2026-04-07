@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getHour, weekKey, today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
+import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -34,7 +35,7 @@ function calcHours(bedStr, wakeStr) {
   return Math.round(h * 10) / 10
 }
 
-function SleepSection({ daily, onUpdate }) {
+function SleepSection({ daily, onUpdate, fromHome, onGoHome }) {
   const s = daily?.sleep || {}
   const [bedtime, setBedtime] = useState(s.bedtime || '10 PM')
   const [waketime, setWaketime] = useState(s.waketime || '7 AM')
@@ -52,6 +53,7 @@ function SleepSection({ daily, onUpdate }) {
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
       {saved && quality <= 2 && (
         <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Rough night. Be extra gentle with yourself today. 💙</p>
@@ -100,7 +102,7 @@ function SleepSection({ daily, onUpdate }) {
 // ─── Meds ───────────────────────────────────────────────────────────────────
 const MED_OPTS = [{ v: true, label: 'Yes ✅' }, { v: false, label: 'Not yet' }, { v: null, label: "Don't have" }]
 
-function MedsSection({ daily, onUpdate, profile }) {
+function MedsSection({ daily, onUpdate, profile, fromHome, onGoHome }) {
   const hour = getHour()
   const showMorning = hour < 17
   const showEvening = hour >= 12
@@ -125,8 +127,11 @@ function MedsSection({ daily, onUpdate, profile }) {
     </div>
   )
 
+  const medsDone = (m.morning !== undefined || !showMorning) && (m.evening !== undefined || !showEvening) && (m.morning !== undefined || m.evening !== undefined)
+
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={medsDone && fromHome} onGoHome={onGoHome} />
       <div style={card}>
         {showMorning && renderMed('Did you take your morning meds? ☀️', 'morning')}
         {showEvening && renderMed('Did you take your evening meds? 🌙', 'evening')}
@@ -154,7 +159,7 @@ const PAIN = [
 ]
 const CRASH_TRIGGERS = ['Did too much yesterday', "Didn't sleep well", 'Stress', 'Sensory overload', 'Heat', 'Forgot to eat', 'Skipped meds', 'Other']
 
-function EnergySection({ daily, onUpdate }) {
+function EnergySection({ daily, onUpdate, fromHome, onGoHome }) {
   const d = daily || {}
   const [energy, setEnergy] = useState(d.energy || null)
   const [pain, setPain] = useState(d.pain || null)
@@ -163,15 +168,18 @@ function EnergySection({ daily, onUpdate }) {
   const [restHours, setRestHours] = useState(d.restHours || 0)
   const [actActive, setActActive] = useState(d.activity?.attempted || null)
   const [actTolerance, setActTolerance] = useState(d.activity?.tolerance || null)
+  const [saved, setSaved] = useState(d.energy !== undefined)
 
   const toggleTrigger = (t) => setTriggers(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
 
   const save = () => {
     onUpdate({ energy, pain, crash: { triggered: crashTriggered, triggers }, restHours, activity: { attempted: actActive, tolerance: actTolerance } })
+    setSaved(true)
   }
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
       {energy <= 2 && energy !== null && (
         <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0 }}>Rest is not giving up — it's taking care of yourself. 💙</p>
@@ -245,11 +253,12 @@ function EnergySection({ daily, onUpdate }) {
 }
 
 // ─── Water ──────────────────────────────────────────────────────────────────
-function WaterSection({ daily, onUpdate }) {
+function WaterSection({ daily, onUpdate, fromHome, onGoHome }) {
   const count = daily?.water?.count || 0
   const set = (n) => onUpdate({ water: { count: Math.max(0, Math.min(8, n)) } })
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={count > 0 && fromHome} onGoHome={onGoHome} />
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 6 }}>Water today</div>
         <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 900, color: C.blue, marginBottom: 16 }}>{count}/8 glasses</div>
@@ -280,16 +289,18 @@ const SENSORY_LEVELS = [
 ]
 const SENSORY_BOTHERS = ['Noise', 'Light', 'Touch/texture', 'Smells', 'Too many people', 'Screens', 'Temperature', 'Everything']
 
-function SensorySection({ daily, onUpdate }) {
+function SensorySection({ daily, onUpdate, fromHome, onGoHome }) {
   const s = daily?.sensory || {}
   const [level, setLevel] = useState(s.level || null)
   const [bothering, setBothering] = useState(s.bothering || [])
+  const [saved, setSaved] = useState(s.level !== undefined)
 
   const toggle = (b) => setBothering(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b])
-  const save = () => onUpdate({ sensory: { level, bothering } })
+  const save = () => { onUpdate({ sensory: { level, bothering } }); setSaved(true) }
 
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
       {level >= 4 && (
         <div style={{ ...card, background: '#FDE8E4', border: `2px solid ${C.accent}` }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.6 }}>Can you get somewhere quiet? Try closing your eyes for 30 seconds. Put on headphones with no music — just quiet. 🫶</p>
@@ -425,17 +436,283 @@ function WeeklySection({ profile }) {
   )
 }
 
+// ─── Window of Tolerance (T1-04) ────────────────────────────────────────────
+const WINDOW_LEVELS = [
+  { v: 7, emoji: '🔴', label: 'Manic / out of control', zone: 'hyper', color: C.red, bg: C.redBg },
+  { v: 6, emoji: '🟠', label: 'Racing thoughts, panicky, impulsive', zone: 'hyper', color: C.red, bg: C.redBg },
+  { v: 5, emoji: '🟡', label: 'Tense but managing', zone: 'window', color: C.green, bg: C.greenBg },
+  { v: 4, emoji: '🟢', label: 'Present and thinking clearly', zone: 'window', color: C.green, bg: C.greenBg },
+  { v: 3, emoji: '🟡', label: 'A little foggy but okay', zone: 'window', color: C.green, bg: C.greenBg },
+  { v: 2, emoji: '🔵', label: 'Numb, shut down, frozen', zone: 'hypo', color: C.blue, bg: C.blueBg },
+  { v: 1, emoji: '🟣', label: 'Completely disconnected', zone: 'hypo', color: C.blue, bg: C.blueBg },
+]
+
+const WINDOW_SKILLS = {
+  hyper: [
+    { emoji: '🧊', label: 'Cold water on face or hold ice', skill: 'TIPP: Temperature' },
+    { emoji: '🫁', label: 'Breathe in 4, out 6 — five times', skill: 'TIPP: Paced Breathing' },
+    { emoji: '🛑', label: 'STOP: Stop, Take a step back, Observe, Proceed', skill: 'STOP Skill' },
+  ],
+  hypo: [
+    { emoji: '👀', label: '5 things you see, 4 you hear, 3 you touch, 2 you smell, 1 you taste', skill: '5-4-3-2-1 Grounding' },
+    { emoji: '🧘', label: 'Scan your body from toes to head — just notice', skill: 'Body Scan' },
+    { emoji: '🚶', label: 'Stand up and stretch, or walk to another room', skill: 'Gentle Movement' },
+  ],
+}
+
+function WindowSection({ daily, onUpdate, fromHome, onGoHome }) {
+  const [selected, setSelected] = useState(daily?.window || null)
+  const [saved, setSaved] = useState(daily?.window !== undefined)
+
+  const level = WINDOW_LEVELS.find(l => l.v === selected)
+  const skills = level ? WINDOW_SKILLS[level.zone] : null
+
+  const save = () => {
+    onUpdate({ window: selected })
+    setSaved(true)
+  }
+
+  return (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 6 }}>Where is your nervous system right now?</div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.4 }}>
+          This is your "window of tolerance" — the zone where you can think clearly. Above it = too revved up. Below it = too shut down.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {WINDOW_LEVELS.map(l => (
+            <button key={l.v} onClick={() => setSelected(l.v)} style={{
+              padding: '14px 16px', borderRadius: 16,
+              border: `2px solid ${selected === l.v ? l.color : '#F0E8E0'}`,
+              background: selected === l.v ? l.bg : 'white',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+            }}>
+              <span style={{ fontSize: 22 }}>{l.emoji}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{l.v}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight }}>{l.label}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Zone label */}
+        {level && (
+          <div style={{ background: level.bg, borderRadius: 14, padding: '12px 16px', border: `2px solid ${level.color}`, marginBottom: 14, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: level.color }}>
+              {level.zone === 'hyper' ? '⬆️ Above your window — too revved up' :
+               level.zone === 'hypo' ? '⬇️ Below your window — too shut down' :
+               '✅ Inside your window — you can think clearly'}
+            </div>
+          </div>
+        )}
+
+        {/* Skill suggestions for outside-window states */}
+        {skills && level.zone !== 'window' && (
+          <div style={{ background: '#F8F4F0', borderRadius: 16, padding: '14px 16px', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.textLight, marginBottom: 10 }}>SKILLS THAT CAN HELP:</div>
+            {skills.map((s, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: i < skills.length - 1 ? '1px solid #F0E8E0' : 'none' }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{s.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{s.skill}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, lineHeight: 1.4 }}>{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button onClick={save} disabled={!selected} style={{
+          width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+          background: selected ? C.primary : '#E0E0E0', color: 'white',
+          fontSize: 15, fontWeight: 800, cursor: selected ? 'pointer' : 'not-allowed',
+        }}>
+          Save ✓
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Dissociation Tracking (T1-05) ──────────────────────────────────────────
+const DISSOCIATION_LEVELS = [
+  { v: 1, emoji: '💚', label: 'No', sub: 'I felt present today.' },
+  { v: 2, emoji: '💛', label: 'A little', sub: 'Some moments felt hazy or far away.' },
+  { v: 3, emoji: '🟠', label: 'Some', sub: 'I lost chunks of time or felt unreal.' },
+  { v: 4, emoji: '❤️', label: 'A lot', sub: 'I was really disconnected from myself or the world.' },
+]
+
+function DissociationSection({ daily, onUpdate, fromHome, onGoHome }) {
+  const [level, setLevel] = useState(daily?.dissociation || null)
+  const [context, setContext] = useState(daily?.dissociationContext || '')
+  const [saved, setSaved] = useState(daily?.dissociation !== undefined)
+
+  const save = () => {
+    onUpdate({ dissociation: level, dissociationContext: context.trim() })
+    setSaved(true)
+  }
+
+  return (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
+
+      {/* Grounding prompt if "A lot" */}
+      {level === 4 && (
+        <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>Let's ground you right now. 💙</div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.6, margin: 0 }}>
+            Look around and find:<br/>
+            <strong>5</strong> things you can see<br/>
+            <strong>4</strong> things you can touch<br/>
+            <strong>3</strong> things you can hear<br/>
+            <strong>2</strong> things you can smell<br/>
+            <strong>1</strong> thing you can taste<br/>
+            <br/>Take your time. There's no rush.
+          </p>
+        </div>
+      )}
+
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 6 }}>Did you feel disconnected today?</div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.4 }}>
+          Dissociation means feeling "not here" — like you're watching from outside yourself, or time goes missing.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {DISSOCIATION_LEVELS.map(l => (
+            <button key={l.v} onClick={() => setLevel(l.v)} style={{
+              padding: '14px 16px', borderRadius: 16,
+              border: `2px solid ${level === l.v ? C.accent : '#F0E8E0'}`,
+              background: level === l.v ? '#FDE8E4' : 'white',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+            }}>
+              <span style={{ fontSize: 24 }}>{l.emoji}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{l.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight }}>{l.sub}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {level && level >= 2 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.textLight, marginBottom: 8 }}>What was happening when it started? (optional)</div>
+            <textarea
+              value={context}
+              onChange={e => setContext(e.target.value)}
+              placeholder="You can type, talk, or skip this."
+              rows={3}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 14, border: '2px solid #F0E8E0',
+                fontSize: 14, fontWeight: 600, background: 'white', color: C.text,
+                resize: 'none', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        )}
+
+        <button onClick={save} disabled={!level} style={{
+          width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+          background: level ? C.primary : '#E0E0E0', color: 'white',
+          fontSize: 15, fontWeight: 800, cursor: level ? 'pointer' : 'not-allowed',
+        }}>
+          Save ✓
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Body-Self Connection (T1-10) ───────────────────────────────────────────
+const BODY_SELF_OPTIONS = [
+  { v: 'at_home', emoji: '💜', label: 'At home', sub: 'My body feels like mine today.' },
+  { v: 'okay', emoji: '💙', label: 'Okay', sub: "Not thinking about it much." },
+  { v: 'disconnected', emoji: '😐', label: 'Disconnected', sub: "My body doesn't feel like me." },
+  { v: 'dysphoric', emoji: '💔', label: 'Dysphoric', sub: 'Really struggling with my body today.' },
+]
+
+function BodySelfSection({ daily, onUpdate, fromHome, onGoHome }) {
+  const [selected, setSelected] = useState(daily?.bodySelf || null)
+  const [saved, setSaved] = useState(!!daily?.bodySelf)
+
+  const save = () => {
+    onUpdate({ bodySelf: selected })
+    setSaved(true)
+  }
+
+  return (
+    <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      <BackToHomeBanner show={saved && fromHome} onGoHome={onGoHome} />
+
+      {saved && selected === 'dysphoric' && (
+        <div style={{ ...card, background: '#FDE8E4', border: `2px solid ${C.accent}` }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>
+            Your body is yours. Even on the hardest days, you are allowed to take up space exactly as you are. 💜
+          </div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginTop: 8, marginBottom: 0 }}>
+            If you have a coping plan, check it now. You wrote it for moments like this.
+          </p>
+        </div>
+      )}
+
+      {saved && selected === 'disconnected' && (
+        <div style={{ ...card, background: C.blueBg, border: `2px solid ${C.blue}` }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>
+            Disconnected days happen. Try putting your hands under warm water or holding something cold — it can help you feel your body again. 💙
+          </div>
+        </div>
+      )}
+
+      <div style={card}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 6 }}>How does your body feel today?</div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: C.textLight, marginBottom: 14, lineHeight: 1.4 }}>
+          This is about your relationship with your body — not pain or energy, but how "at home" you feel in it.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          {BODY_SELF_OPTIONS.map(o => (
+            <button key={o.v} onClick={() => setSelected(o.v)} style={{
+              padding: '16px 18px', borderRadius: 16,
+              border: `2px solid ${selected === o.v ? C.accent : '#F0E8E0'}`,
+              background: selected === o.v ? '#FDE8E4' : 'white',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+            }}>
+              <span style={{ fontSize: 28 }}>{o.emoji}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{o.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.textLight }}>{o.sub}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={save} disabled={!selected} style={{
+          width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+          background: selected ? C.primary : '#E0E0E0', color: 'white',
+          fontSize: 15, fontWeight: 800, cursor: selected ? 'pointer' : 'not-allowed',
+        }}>
+          Save ✓
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 const SUBS = [
   { key: 'sleep', label: '💤 Sleep' },
   { key: 'meds', label: '💊 Meds' },
   { key: 'energy', label: '⚡ Energy' },
   { key: 'water', label: '💧 Water' },
+  { key: 'window', label: '🧠 Window' },
   { key: 'sensory', label: '🧠 Sensory' },
+  { key: 'dissociation', label: '🌫 Dissociation' },
+  { key: 'bodySelf', label: '💜 Body-Self' },
   { key: 'weekly', label: '📋 Weekly' },
 ]
 
-export default function BodyTab({ daily, onUpdate, profile, initialSub }) {
+export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome, onGoHome }) {
   const [sub, setSub] = useState(initialSub || 'sleep')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -447,11 +724,14 @@ export default function BodyTab({ daily, onUpdate, profile, initialSub }) {
         ))}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px' }}>
-        {sub === 'sleep' && <SleepSection daily={daily} onUpdate={onUpdate} />}
-        {sub === 'meds' && <MedsSection daily={daily} onUpdate={onUpdate} profile={profile} />}
-        {sub === 'energy' && <EnergySection daily={daily} onUpdate={onUpdate} />}
-        {sub === 'water' && <WaterSection daily={daily} onUpdate={onUpdate} />}
-        {sub === 'sensory' && <SensorySection daily={daily} onUpdate={onUpdate} />}
+        {sub === 'sleep' && <SleepSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'meds' && <MedsSection daily={daily} onUpdate={onUpdate} profile={profile} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'energy' && <EnergySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'water' && <WaterSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'window' && <WindowSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'sensory' && <SensorySection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'dissociation' && <DissociationSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
+        {sub === 'bodySelf' && <BodySelfSection daily={daily} onUpdate={onUpdate} fromHome={fromHome} onGoHome={onGoHome} />}
         {sub === 'weekly' && <WeeklySection profile={profile} />}
       </div>
     </div>

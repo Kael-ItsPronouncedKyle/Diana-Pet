@@ -181,8 +181,9 @@ export function computeManiaScore(dailyData) {
   }
 
   // High energy without long sleep
-  if (dailyData.energy >= 4 && (sleep?.hours || 8) < 6) score += 2
-  if (dailyData.energy >= 5 && (sleep?.hours || 8) < 7) score += 1
+  const energy = dailyData.energy || 0
+  if (energy >= 4 && (sleep?.hours || 8) < 6) score += 2
+  if (energy >= 5 && (sleep?.hours || 8) < 7) score += 1
 
   // Elevated urge frequency
   const urgeCount = (dailyData.urges || []).length
@@ -374,7 +375,7 @@ export function assessNighttimeRisk(dailyData, profile) {
   if (!isNighttimeRiskWindow()) return null
 
   const luisWorking = isLuisWorking(profile)
-  const elevatedMood = dailyData?.energy >= 4
+  const elevatedMood = (dailyData?.energy || 0) >= 4
   const hasUrges = (dailyData?.urges || []).length > 0
   const highDissociation = (dailyData?.dissociation || 0) >= 3
 

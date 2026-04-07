@@ -186,6 +186,7 @@ export const PATTERN_NIGHTTIME_URGES = {
     const days = Object.values(weekData).filter(Boolean)
     const nightUrgesDays = days.filter(d =>
       (d.urges || []).some(u => {
+        if (!u?.timestamp) return false
         const hour = new Date(u.timestamp).getHours()
         return hour >= 21 || hour < 4
       })
@@ -196,6 +197,7 @@ export const PATTERN_NIGHTTIME_URGES = {
     const days = Object.values(weekData).filter(Boolean)
     const count = days.filter(d =>
       (d.urges || []).some(u => {
+        if (!u?.timestamp) return false
         const hour = new Date(u.timestamp).getHours()
         return hour >= 21 || hour < 4
       })
@@ -340,7 +342,19 @@ export const PATTERN_MEDS_CONSISTENT = {
   autoSurfaceSafetyPlan: false,
   detect: (weekData) => {
     const days = Object.values(weekData).filter(Boolean)
-    return days.filter(d => d.meds?.morning === true || d.meds?.evening === true).length >= 6
+    // Count days where ALL available meds were taken (morning AND evening if both logged)
+    const consistentDays = days.filter(d => {
+      if (!d.meds) return false
+      const morning = d.meds.morning
+      const evening = d.meds.evening
+      // If both are tracked, both must be true
+      if (morning !== undefined && evening !== undefined) return morning === true && evening === true
+      // If only one is tracked, it must be true
+      if (morning !== undefined) return morning === true
+      if (evening !== undefined) return evening === true
+      return false
+    }).length
+    return consistentDays >= 6
   },
   message: () =>
     "You've been taking your meds consistently this week. " +
@@ -504,7 +518,7 @@ export const PATTERN_EVENING_URGES = {
   detect: (weekData) => {
     const days = Object.values(weekData).filter(Boolean)
     return days.filter(d =>
-      (d.urges || []).some(u => new Date(u.timestamp).getHours() >= 17)
+      (d.urges || []).some(u => u?.timestamp && new Date(u.timestamp).getHours() >= 17)
     ).length >= 3
   },
   message: () =>
@@ -519,7 +533,7 @@ export const PATTERN_PAIN_SLEEP = {
   autoSurfaceSafetyPlan: false,
   detect: (weekData) => {
     const days = Object.values(weekData).filter(Boolean)
-    return days.filter(d => d.pain >= 3 && (d.sleep?.hours || 8) < 6).length >= 2
+    return days.filter(d => (d.pain || 0) >= 3 && (d.sleep?.hours || 8) < 6).length >= 2
   },
   message: () =>
     "Your pain was higher on days you slept less. " +

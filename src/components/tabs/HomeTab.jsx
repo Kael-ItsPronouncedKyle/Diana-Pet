@@ -328,20 +328,20 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
         </div>
       </div>
 
-      {/* Post-discharge note — gentle daily reminder during first 30 days */}
-      {postDischargeNote && (
+      {/* Clinical awareness banners — consolidated to max ONE non-nighttime banner
+          to avoid overwhelming the home screen on hard days.
+          Priority: post-discharge+mania combined > mania alone > post-discharge alone */}
+      {postDischargeNote && maniaScore >= 6 ? (
+        // Combined: post-discharge window + mania signals
         <div style={{
-          background: '#E8F1FA', border: '2px solid #6BA8D6', borderRadius: 16,
+          background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
           padding: '12px 16px', marginBottom: 16,
         }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
-            {postDischargeNote}
+            You're {daysOutOfHospital} days out of the hospital, and your sleep has been short with your energy up. Your brain needs extra time and support right now. Worth checking in with your team. 💛
           </div>
         </div>
-      )}
-
-      {/* Mania score banner — shown at 6+ */}
-      {maniaScore >= 8 && (
+      ) : maniaScore >= 8 ? (
         <div style={{
           background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
           padding: '12px 16px', marginBottom: 16,
@@ -350,8 +350,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
             Your sleep has been short but your energy has been high. That pattern sometimes means your mood is shifting. Worth checking in with your team this week. 💛
           </div>
         </div>
-      )}
-      {maniaScore >= 6 && maniaScore < 8 && (
+      ) : maniaScore >= 6 ? (
         <div style={{
           background: '#FFF8E1', border: '2px solid #F0C050', borderRadius: 16,
           padding: '12px 16px', marginBottom: 16,
@@ -360,15 +359,26 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
             Short sleep + good energy can be a sign your mood is shifting a little. Keep an eye on it. 💛
           </div>
         </div>
-      )}
+      ) : postDischargeNote ? (
+        <div style={{
+          background: '#E8F1FA', border: '2px solid #6BA8D6', borderRadius: 16,
+          padding: '12px 16px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#3D3535', lineHeight: 1.5 }}>
+            {postDischargeNote}
+          </div>
+        </div>
+      ) : null}
 
-      {/* Nighttime check-in card — shown 9pm-4am when risk conditions are met */}
+      {/* Nighttime check-in card — shown 9pm-4am when risk conditions are met.
+          This is separate from the above because it's a different kind of message:
+          a real-time check-in, not a pattern observation. */}
       {nighttimeRisk && (
         <div style={{
           background: '#E8F4F1', border: '2px solid #6BA89E', borderRadius: 16,
           padding: '14px 16px', marginBottom: 16,
         }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: nighttimeRisk.showSafetyPlan ? 8 : 0 }}>
             {nighttimeRisk.message}
           </div>
           {nighttimeRisk.showSafetyPlan && onOpenCrisis && (

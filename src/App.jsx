@@ -359,6 +359,7 @@ export default function App() {
             onToast={showToast}
             onCreatureReaction={handleCreatureReaction}
             onMilestone={handleMilestone}
+            onOpenCrisis={() => setShowCrisis(true)}
           />
         )
       case 'recovery':
@@ -395,7 +396,7 @@ export default function App() {
           />
         )
       case 'week':
-        return <WeekTab onGoHome={goHome} />
+        return <WeekTab profile={profile} onGoHome={goHome} onOpenCrisis={() => setShowCrisis(true)} />
       default:
         return null
     }

@@ -7,7 +7,8 @@ import { runClinicalPatterns } from '../../constants/clinicalPatterns.js'
 const C = {
   primary: '#6BA89E', text: '#3D3535', textLight: '#8A7F7F',
   green: '#6BBF8A', greenBg: '#E6F7EC', yellow: '#F0C050', yellowBg: '#FFF8E1',
-  red: '#E87B7B', redBg: '#FDECEC', card: '#FFFFFF',
+  red: '#E87B7B', redBg: '#FDECEC', blue: '#6BA8D6', blueBg: '#E8F1FA',
+  card: '#FFFFFF',
 }
 const card = { background: C.card, borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(61,53,53,0.08)', marginBottom: 14 }
 
@@ -45,11 +46,19 @@ function DayCell({ dateStr, data }) {
   )
 }
 
+// Tier 1 with safety plan = warm coral. Tier 1 without = softer amber.
+// We avoid stacking multiple alarm-red cards which can feel punishing.
 const TIER_STYLES = {
-  1: { background: C.redBg, border: `2px solid ${C.red}`, color: C.text, icon: '🚨' },
-  2: { background: C.yellowBg, border: `2px solid ${C.yellow}`, color: C.text, icon: '💛' },
-  3: { background: C.greenBg, border: `2px solid ${C.green}`, color: C.text, icon: '💚' },
-  4: { background: C.blueBg, border: `2px solid ${C.blue}`, color: C.text, icon: '💙' },
+  '1-safety': { background: C.redBg, border: `2px solid ${C.red}`, color: C.text },
+  '1-flag': { background: '#FFF4E6', border: '2px solid #E8A55F', color: C.text },
+  2: { background: C.yellowBg, border: `2px solid ${C.yellow}`, color: C.text },
+  3: { background: C.greenBg, border: `2px solid ${C.green}`, color: C.text },
+  4: { background: C.blueBg, border: `2px solid ${C.blue}`, color: C.text },
+}
+
+function getTierStyle(pattern) {
+  if (pattern.tier === 1) return TIER_STYLES[pattern.autoSurfaceSafetyPlan ? '1-safety' : '1-flag']
+  return TIER_STYLES[pattern.tier] || TIER_STYLES[4]
 }
 
 export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
@@ -119,7 +128,7 @@ export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
           <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 14 }}>Things I noticed 🔍</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {patterns.map((p) => {
-              const style = TIER_STYLES[p.tier] || TIER_STYLES[4]
+              const style = getTierStyle(p)
               return (
                 <div
                   key={p.id}

@@ -44,7 +44,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [eventMessage, setEventMessage] = useState(null)
 
-  // Auth state listener
+  // Auth state listener — onAuthStateChange is set up FIRST because in
+  // Supabase v2 it fires INITIAL_SESSION which processes the OAuth hash
+  // fragment (#access_token=...). getSession() does NOT process the hash,
+  // so calling it first caused a race condition where authed stayed false.
   useEffect(() => {
     if (!supabaseEnabled || !supabase) {
       setAuthReady(true)
@@ -52,21 +55,13 @@ export default function App() {
       return
     }
 
-    // First check for existing session (handles OAuth redirect + refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        storage.setUserId(session.user.id)
-        setAuthed(true)
-      }
-      setAuthReady(true)
-    })
-
-    // Then listen for future changes (sign-in, sign-out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (session?.user) {
           storage.setUserId(session.user.id)
-          await storage.sync()
+          if (event === 'SIGNED_IN') {
+            await storage.sync()
+          }
           setAuthed(true)
         } else {
           storage.setUserId(null)
@@ -75,7 +70,16 @@ export default function App() {
         setAuthReady(true)
       }
     )
-    return () => subscription?.unsubscribe()
+
+    // Safety fallback: unblock UI if onAuthStateChange never fires
+    const timeout = setTimeout(() => {
+      setAuthReady(true)
+    }, 5000)
+
+    return () => {
+      subscription?.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   // Load data on mount (after auth is ready)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CREATURES } from '../../constants/creatures.js'
 import storage from '../../utils/storage.js'
+import { supabase, supabaseEnabled } from '../../lib/supabase.js'
 import SafetyPlanWizard from '../SafetyPlanWizard.jsx'
 
 const C = {
@@ -48,7 +49,13 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
   const resetAll = async () => {
     const keys = await storage.list('diana-')
     await Promise.all(keys.map(k => storage.delete(k)))
+    if (supabase) await supabase.auth.signOut()
     window.location.reload()
+  }
+
+  const signOut = async () => {
+    if (!supabase) return
+    await supabase.auth.signOut()
   }
 
   const hasSafetyPlan = profile?.safetyPlan?.completedAt
@@ -152,6 +159,13 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
               <button onClick={saveSettings} style={{ width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: saved ? '#6BBF8A' : C.primary, color: 'white', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 14, transition: 'background 0.3s' }}>
                 {saved ? 'Saved! ✓' : 'Save settings'}
               </button>
+
+              {/* Sign out */}
+              {supabaseEnabled && (
+                <button onClick={signOut} style={{ width: '100%', padding: '16px', borderRadius: 16, border: '2px solid #F0E8E0', background: 'white', color: C.text, fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 14 }}>
+                  Sign out
+                </button>
+              )}
 
               {/* Reset */}
               <div style={{ ...card, border: `2px solid ${C.red}`, background: C.redBg }}>

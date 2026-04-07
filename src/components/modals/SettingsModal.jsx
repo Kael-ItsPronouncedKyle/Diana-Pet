@@ -4,6 +4,7 @@ import storage from '../../utils/storage.js'
 import { supabase, supabaseEnabled } from '../../lib/supabase.js'
 import SafetyPlanWizard from '../SafetyPlanWizard.jsx'
 import ValuesAnchor from '../shared/ValuesAnchor.jsx'
+import ProviderExport from './ProviderExport.jsx'
 
 const card = {
   background: 'var(--card)',
@@ -21,6 +22,7 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
   const [creatureName, setCreatureName] = useState(profile?.creatureName || '')
   const [saved, setSaved] = useState(false)
   const [showSafetyPlan, setShowSafetyPlan] = useState(false)
+  const [showExport, setShowExport] = useState(false)
 
   // Custom Trackers
   const [newTrackerName, setNewTrackerName] = useState('')
@@ -140,6 +142,29 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
                   }}
                 >
                   {hasSafetyPlan ? 'Edit my safety plan' : 'Set up my safety plan'}
+                </button>
+              </div>
+
+              {/* Provider Export */}
+              <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 24 }}>📋</span>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)' }}>For my therapist</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light)' }}>Share your week with your care team</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light)', lineHeight: 1.5, marginBottom: 12 }}>
+                  Makes a summary of your last 7 days that you can copy and show your therapist or doctor.
+                </p>
+                <button
+                  onClick={() => setShowExport(true)}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                    background: 'var(--primary)', color: 'white', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                  }}
+                >
+                  See my summary
                 </button>
               </div>
 
@@ -379,6 +404,8 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
           {saved ? '✓ Saved' : 'Save'}
         </button>
       </div>
+      {/* Provider Export Modal */}
+      <ProviderExport isOpen={showExport} onClose={() => setShowExport(false)} />
     </div>
   )
 }

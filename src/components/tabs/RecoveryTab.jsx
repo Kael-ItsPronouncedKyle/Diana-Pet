@@ -346,9 +346,11 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, fromHome, onGoHome }) {
   )
 }
 
-// ─── DBT Skill ─────────────────────────────────────────────────────────────
+// ─── DBT Skill (T1-14: effectiveness tracking) ─────────────────────────────
 
 function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
+  const [ratingDone, setRatingDone] = useState(!!daily?.dbt?.effective !== undefined && daily?.dbt?.effective !== null ? true : false)
+
   const skill = useMemo(() => {
     if (daily?.dbt?.skillId) {
       return DBT_SKILLS.find(s => s.id === daily.dbt.skillId) || DBT_SKILLS[0]
@@ -358,13 +360,29 @@ function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
   }, [daily?.dbt?.skillId])
 
   const practiced = daily?.dbt?.practiced
+  const effective = daily?.dbt?.effective
 
   const markPracticed = async () => {
     const patch = { dbt: { skillId: skill.id, practiced: true } }
     onUpdate(patch)
     const history = (await storage.get('diana-dbt-history')) || []
-    history.push({ date: today(), skillId: skill.id })
+    history.push({ date: today(), skillId: skill.id, effective: null })
     await storage.set('diana-dbt-history', history)
+  }
+
+  const rateSkill = async (wasHelpful) => {
+    onUpdate({ dbt: { skillId: skill.id, practiced: true, effective: wasHelpful } })
+    // Update last history entry for today's skill
+    try {
+      const history = (await storage.get('diana-dbt-history')) || []
+      const idx = [...history].reverse().findIndex(h => h.skillId === skill.id && h.date === today())
+      if (idx !== -1) {
+        const realIdx = history.length - 1 - idx
+        history[realIdx] = { ...history[realIdx], effective: wasHelpful }
+      }
+      await storage.set('diana-dbt-history', history)
+    } catch { /* ignore */ }
+    setRatingDone(true)
   }
 
   const CAT_COLORS = {
@@ -397,8 +415,34 @@ function DbtSkill({ daily, onUpdate, fromHome, onGoHome }) {
             I practiced this ✅
           </button>
         ) : (
-          <div style={{ textAlign: 'center', padding: '14px', background: '#E6F7EC', borderRadius: 14, color: '#4A9A6A', fontSize: 15, fontWeight: 800 }}>
-            Nice work. That's a real skill you just used. 💪
+          <div>
+            <div style={{ textAlign: 'center', padding: '14px', background: '#E6F7EC', borderRadius: 14, color: '#4A9A6A', fontSize: 15, fontWeight: 800, marginBottom: effective === null || effective === undefined ? 12 : 0 }}>
+              Nice work. That's a real skill you just used. 💪
+            </div>
+            {/* T1-14: Effectiveness rating */}
+            {(effective === null || effective === undefined) && !ratingDone && (
+              <div style={{ background: '#F8F4F0', borderRadius: 14, padding: '14px 16px', animation: 'fade-up 0.2s ease-out' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#3D3535', marginBottom: 12, textAlign: 'center' }}>Did it help?</div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => rateSkill(true)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#E6F7EC', fontSize: 24, cursor: 'pointer', minHeight: 52 }}>
+                    👍
+                  </button>
+                  <button onClick={() => rateSkill(false)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#FDE8E4', fontSize: 24, cursor: 'pointer', minHeight: 52 }}>
+                    👎
+                  </button>
+                </div>
+              </div>
+            )}
+            {(effective === true) && (
+              <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#6BBF8A', padding: '8px 0' }}>
+                Marked as helpful 👍 — we'll remember that.
+              </div>
+            )}
+            {(effective === false) && (
+              <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#8A7F7F', padding: '8px 0' }}>
+                Noted 👎 — not every skill works every time. That's okay.
+              </div>
+            )}
           </div>
         )}
       </div>

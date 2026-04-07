@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { lastNDays, dayLabel } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
+import TopNav from '../shared/TopNav.jsx'
 
 const C = {
   primary: '#6BA89E', text: '#3D3535', textLight: '#8A7F7F',
@@ -89,7 +90,7 @@ function DayCell({ dateStr, data }) {
   )
 }
 
-export default function WeekTab() {
+export default function WeekTab({ onGoHome }) {
   const [weekData, setWeekData] = useState({})
   const [loading, setLoading] = useState(true)
   const days = lastNDays(7)
@@ -108,7 +109,11 @@ export default function WeekTab() {
   if (loading) return <div style={{ padding: 32, textAlign: 'center', color: C.textLight, fontWeight: 700 }}>Loading...</div>
 
   return (
-    <div style={{ padding: '16px 16px 100px', animation: 'fade-up 0.25s ease-out' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '12px 16px' }}>
+        <TopNav onGoHome={onGoHome} />
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 100px', animation: 'fade-up 0.25s ease-out' }}>
       <div style={card}>
         <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 14 }}>Last 7 Days</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
@@ -145,6 +150,7 @@ export default function WeekTab() {
           <div style={{ fontSize: 14, fontWeight: 700 }}>Keep checking in and patterns will show up here.</div>
         </div>
       )}
+      </div>
     </div>
   )
 }

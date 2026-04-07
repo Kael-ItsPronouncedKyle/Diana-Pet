@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { PUPPY_DATA } from '../../constants/puppyData.js'
 import { today } from '../../utils/dates.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
+import TopNav from '../shared/TopNav.jsx'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -152,6 +153,9 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '12px 16px' }}>
+        <TopNav onGoHome={onGoHome} />
+      </div>
       {/* Phase banner */}
       <div style={{ background: C.primaryLight, borderBottom: '1px solid #E8F4F1', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>

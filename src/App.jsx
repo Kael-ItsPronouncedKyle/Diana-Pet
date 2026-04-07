@@ -248,7 +248,7 @@ export default function App() {
           />
         )
       case 'week':
-        return <WeekTab />
+        return <WeekTab onGoHome={goHome} />
       default:
         return null
     }

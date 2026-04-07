@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getHour, weekKey, today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
+import TopNav from '../shared/TopNav.jsx'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1', accent: '#E8907E',
@@ -716,6 +717,9 @@ export default function BodyTab({ daily, onUpdate, profile, initialSub, fromHome
   const [sub, setSub] = useState(initialSub || 'sleep')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '12px 16px' }}>
+        <TopNav onGoHome={onGoHome} />
+      </div>
       <div style={{ overflowX: 'auto', padding: '10px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', display: 'flex', gap: 8, scrollbarWidth: 'none' }}>
         {SUBS.map(s => (
           <button key={s.key} onClick={() => setSub(s.key)} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', whiteSpace: 'nowrap', background: sub === s.key ? C.primary : '#F0E8E0', color: sub === s.key ? 'white' : C.text, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>

@@ -5,6 +5,7 @@ import { CONTEXT_SKILL_MAP } from '../../constants/skillMap.js'
 import { today } from '../../utils/dates.js'
 import storage from '../../utils/storage.js'
 import BackToHomeBanner from '../shared/BackToHomeBanner.jsx'
+import TopNav from '../shared/TopNav.jsx'
 
 // ─── Emotion Wheel (T1-01) ───────────────────────────────────────────────────
 
@@ -1053,6 +1054,9 @@ export default function RecoveryTab({ daily, onUpdate, onOpenCrisis, initialSub,
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '12px 16px' }}>
+        <TopNav onGoHome={onGoHome} />
+      </div>
       {/* Sub-tab bar */}
       <div style={{ display: 'flex', gap: 6, padding: '12px 16px', background: '#FFF8F3', borderBottom: '1px solid #F0E8E0', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {SUBS.map(s => (

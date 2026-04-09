@@ -108,6 +108,10 @@ export default function App() {
           storage.setUserId(null)
           setAuthed(false)
           setAuthReady(true)
+          // Clear app state so stale data doesn't flash on next sign-in
+          setProfile(null)
+          setDaily({})
+          setLoading(true)
         }
       }
     )

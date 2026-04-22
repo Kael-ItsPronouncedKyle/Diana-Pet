@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import SVGCreature from './SVGCreature'
+import SVGCreature from './SVGCreature.jsx'
 
 const SPARKLE_COLORS = ['#F0C050', '#E8907E', '#FFD700', '#6BBF8A', '#6BA8D6', '#E87B7B']
 

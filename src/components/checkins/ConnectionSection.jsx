@@ -22,7 +22,8 @@ function ConnectionSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const [laughed, setLaughed] = useState(c.laughed !== undefined ? c.laughed : null)
   const [seen, setSeen] = useState(c.seen !== undefined ? c.seen : null)
   const [note, setNote] = useState(c.note || '')
-  const [saved, setSaved] = useState(!!c.closeness)
+  // `saved` means "this section was filled out" — `closeness === false` still counts as filled.
+  const [saved, setSaved] = useState(c.closeness !== undefined && c.closeness !== null)
 
   const yesCount = [closeness, laughed, seen].filter(v => v === true).length
 

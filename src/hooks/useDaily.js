@@ -10,20 +10,22 @@ export function useDaily() {
     await storage.set(getDailyKey(), d)
   }, [])
 
-  const updateDaily = useCallback(async (patch) => {
+  const updateDaily = useCallback((patch) => {
+    let nextValue = null
     setDailyData(prev => {
-      const next = { ...prev, ...patch }
-      storage.set(getDailyKey(), next)
-      return next
+      nextValue = { ...prev, ...patch }
+      return nextValue
     })
+    return storage.set(getDailyKey(), nextValue)
   }, [])
 
-  const updateDailyNested = useCallback(async (key, patch) => {
+  const updateDailyNested = useCallback((key, patch) => {
+    let nextValue = null
     setDailyData(prev => {
-      const next = { ...prev, [key]: { ...(prev[key] || {}), ...patch } }
-      storage.set(getDailyKey(), next)
-      return next
+      nextValue = { ...prev, [key]: { ...(prev[key] || {}), ...patch } }
+      return nextValue
     })
+    return storage.set(getDailyKey(), nextValue)
   }, [])
 
   return { dailyData, setDailyData, saveDaily, updateDaily, updateDailyNested }

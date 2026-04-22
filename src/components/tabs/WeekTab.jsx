@@ -105,14 +105,18 @@ export default function WeekTab({ profile, onGoHome, onOpenCrisis }) {
   const days = lastNDays(7)
 
   useEffect(() => {
+    let mounted = true
     Promise.all(days.map(async d => [d, await storage.get(`diana-daily:${d}`)])).then(results => {
+      if (!mounted) return
       const data = {}
       results.forEach(([d, val]) => { data[d] = val })
       setWeekData(data)
       setLoading(false)
     }).catch(() => {
-      setLoading(false)
+      if (mounted) setLoading(false)
     })
+    return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const patterns = runClinicalPatterns(weekData, profile)

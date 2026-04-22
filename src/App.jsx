@@ -46,11 +46,11 @@ export default function App() {
   const [fromHome, setFromHome] = useState(false)
   const [showCrisis, setShowCrisis] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [eventMessage, setEventMessage] = useState(null)
   const [toastMsg, setToastMsg] = useState(null)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [creatureReaction, setCreatureReaction] = useState(null)
   const [darkMode, setDarkMode] = useState(false)
+  const [hapticsOn, setHapticsOn] = useState(true)
 
   // Refs for avoiding stale closures
   const profileRef = useRef(profile)
@@ -81,7 +81,9 @@ export default function App() {
   useEffect(() => {
     ;(async () => {
       const pref = await storage.get('diana-haptics')
-      if (pref === false) setHapticsEnabled(false)
+      const on = pref !== false
+      setHapticsOn(on)
+      setHapticsEnabled(on)
     })()
   }, [])
 
@@ -223,7 +225,7 @@ export default function App() {
     const milestone = checkMilestone(prevCount, newCount)
     if (milestone) {
       setTimeout(() => {
-        setEventMessage(milestone.message)
+        setToastMsg(milestone.message)
         if (milestone.reaction === 'celebrate') {
           setConfettiTrigger(t => t + 1)
           celebrationFeedback()
@@ -232,7 +234,7 @@ export default function App() {
         }
       }, 300)
     } else if (message) {
-      setEventMessage(message)
+      setToastMsg(message)
     }
 
     // Creature reaction — detect what changed
@@ -310,19 +312,6 @@ export default function App() {
     setToastMsg(msg)
   }, [])
 
-  // Milestone handler from HomeTab
-  const handleMilestone = useCallback((milestone) => {
-    if (milestone.reaction === 'celebrate') {
-      setConfettiTrigger(t => t + 1)
-    }
-  }, [])
-
-  // Creature reaction handler from HomeTab
-  const handleCreatureReaction = useCallback((animation) => {
-    setCreatureReaction(animation)
-    setTimeout(() => setCreatureReaction(null), 800)
-  }, [])
-
   // Onboarding complete
   const handleOnboardingComplete = async (profileData) => {
     await saveProfile(profileData)
@@ -337,6 +326,7 @@ export default function App() {
 
   // Haptics toggle
   const toggleHaptics = useCallback(async (val) => {
+    setHapticsOn(val)
     setHapticsEnabled(val)
     await storage.set('diana-haptics', val)
   }, [])
@@ -372,12 +362,9 @@ export default function App() {
             profile={profile}
             daily={daily}
             onNavigate={handleNavigate}
-            onEventMessage={setEventMessage}
             onUpdate={updateDaily}
             onToast={showToast}
             creatureReaction={creatureReaction}
-            onCreatureReaction={handleCreatureReaction}
-            onMilestone={handleMilestone}
             onOpenCrisis={() => setShowCrisis(true)}
           />
         )
@@ -484,6 +471,7 @@ export default function App() {
         onProfileUpdate={updateProfile}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
+        hapticsOn={hapticsOn}
         onToggleHaptics={toggleHaptics}
       />
     </div>

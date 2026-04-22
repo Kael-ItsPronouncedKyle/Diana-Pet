@@ -8,12 +8,16 @@ export default function Toast({ message, onDone }) {
     if (!message) return
     setExiting(false)
     setVisible(true)
+    let inner = null
     const t = setTimeout(() => {
       setExiting(true)
-      setTimeout(() => { setVisible(false); onDone?.() }, 300)
+      inner = setTimeout(() => { setVisible(false); onDone?.() }, 300)
     }, 2200)
-    return () => clearTimeout(t)
-  }, [message])
+    return () => {
+      clearTimeout(t)
+      if (inner) clearTimeout(inner)
+    }
+  }, [message, onDone])
 
   if (!visible || !message) return null
 

@@ -100,7 +100,7 @@ function CheckInRow({ label, emoji, done, onClick }) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, creatureReaction, onCreatureReaction, onMilestone, onOpenCrisis }) {
+export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast, creatureReaction, onOpenCrisis }) {
   const timeOfDay = getTimeOfDay()
   const flow = TIME_FLOWS[timeOfDay]
   const checkInCount = countCheckIns(daily)
@@ -112,11 +112,13 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   const [feedbackMessage, setFeedbackMessage] = useState('')
   const [showAllCheckIns, setShowAllCheckIns] = useState(false)
 
-  // Load week data on mount and when daily changes
+  // Load week data once per mount. Today's entry is merged live from `daily`
+  // so we don't re-fetch 7 days on every field update.
   useEffect(() => {
-    (async () => {
+    let mounted = true
+    ;(async () => {
       const data = {}
-      for (let i = 0; i < 7; i++) {
+      for (let i = 1; i < 7; i++) {
         const d = new Date()
         d.setDate(d.getDate() - i)
         const dateStr = d.toISOString().slice(0, 10)
@@ -128,22 +130,29 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
           // Silently skip if not found
         }
       }
-      setWeekData(data)
+      if (mounted) setWeekData(data)
     })()
-  }, [daily])
+    return () => { mounted = false }
+  }, [])
+
+  // Merge today's live `daily` into week data so clinical patterns react live.
+  const liveWeekData = useMemo(
+    () => ({ ...weekData, [today()]: daily || {} }),
+    [weekData, daily]
+  )
 
   // Load feedback message on mount and when daily/week changes
   useEffect(() => {
     (async () => {
       try {
-        const result = await getFeedbackMessage(daily, weekData, profile || {}, timeOfDay)
+        const result = await getFeedbackMessage(daily, liveWeekData, profile || {}, timeOfDay)
         const msg = (typeof result === 'string') ? result : (result?.message || '💬 Keep going. You matter.')
         setFeedbackMessage(typeof msg === 'string' ? msg : '💬 Keep going. You matter.')
       } catch (e) {
         setFeedbackMessage('💬 Keep going. You matter.')
       }
     })()
-  }, [daily, weekData, profile, timeOfDay])
+  }, [daily, liveWeekData, profile, timeOfDay])
 
   // ─── Safety Plan Banner (clinical pattern detection) ─────────────────
   const [showSafetyBanner, setShowSafetyBanner] = useState(false)
@@ -152,13 +161,13 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   useEffect(() => {
     if (safetyBannerDismissed) return
     try {
-      const patterns = runClinicalPatterns(weekData, profile || {})
+      const patterns = runClinicalPatterns(liveWeekData, profile || {})
       const hasCritical = patterns.some(p => p.tier === 1 && p.autoSurfaceSafetyPlan)
       setShowSafetyBanner(hasCritical)
     } catch (e) {
       // Never crash the UI
     }
-  }, [weekData, profile, safetyBannerDismissed])
+  }, [liveWeekData, profile, safetyBannerDismissed])
 
   const handleDismissSafetyBanner = () => {
     setSafetyBannerDismissed(true)
@@ -178,7 +187,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
         const d = new Date()
         d.setDate(d.getDate() - i)
         const dateStr = d.toISOString().slice(0, 10)
-        const dayData = weekData[dateStr]
+        const dayData = liveWeekData[dateStr]
         if (!dayData || Object.keys(dayData).length === 0) {
           zeroDays.push(dateStr)
         }
@@ -187,7 +196,7 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
     } catch (e) {
       // Never crash the UI
     }
-  }, [weekData, daily?.dropoutBannerSeen])
+  }, [liveWeekData, daily?.dropoutBannerSeen])
 
   const handleDismissDropoutBanner = () => {
     setShowDropoutBanner(false)
@@ -282,39 +291,40 @@ export default function HomeTab({ profile, daily, onNavigate, onEventMessage, on
   const [practiceInput, setPracticeInput] = useState('')
   const [showPracticeInput, setShowPracticeInput] = useState(false)
 
-  // Load Word of Day and progress on mount and when daily changes
+  // Load Word of Day and progress once per day — do NOT re-pick when daily changes
+  // (re-picking would swap today's word the moment the user saves practice text)
+  const todayKey = today()
   useEffect(() => {
-    (async () => {
+    let mounted = true
+    ;(async () => {
       try {
-        // Load word progress from storage
         let progress = (await storage.get('diana-words-progress')) || {}
-
-        // Pick today's word based on spaced repetition
         const picked = pickWordOfDay(progress)
 
-        // Mark as seen if not already seen
         if (picked && !progress[picked.id]?.seen) {
           progress[picked.id] = {
             seen: true,
             learned: false,
             seenCount: 1,
-            lastSeen: today(),
+            lastSeen: todayKey,
           }
           await storage.set('diana-words-progress', progress)
         }
 
+        if (!mounted) return
         setWordProgress(progress)
         setTodayWord(picked)
-
-        // Load practice sentence if already saved
-        if (daily?.wordOfDay?.sentence) {
-          setPracticeInput(daily.wordOfDay.sentence)
-        }
       } catch (e) {
         console.error('Failed to load word of day:', e)
       }
     })()
-  }, [daily])
+    return () => { mounted = false }
+  }, [todayKey])
+
+  // Hydrate practice sentence from daily when it changes (does not re-pick the word)
+  useEffect(() => {
+    if (daily?.wordOfDay?.sentence) setPracticeInput(daily.wordOfDay.sentence)
+  }, [daily?.wordOfDay?.sentence])
 
   // Pick word: prefer unseen, then not-learned (least recent), then all learned
   const pickWordOfDay = (progress) => {

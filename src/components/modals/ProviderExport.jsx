@@ -19,9 +19,13 @@ export default function ProviderExport({ isOpen, onClose }) {
 
   useEffect(() => {
     if (!isOpen) return
+    let mounted = true
     setLoading(true)
     setCopied(false)
-    gatherData().then(d => { setData(d); setLoading(false) })
+    gatherData()
+      .then(d => { if (mounted) { setData(d); setLoading(false) } })
+      .catch(() => { if (mounted) { setData(null); setLoading(false) } })
+    return () => { mounted = false }
   }, [isOpen])
 
   if (!isOpen) return null

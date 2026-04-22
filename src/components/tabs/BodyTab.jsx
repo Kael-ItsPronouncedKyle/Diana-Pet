@@ -177,8 +177,8 @@ function MedsSection({ daily, onUpdate, onToast, profile, fromHome, onGoHome }) 
   }, [])
 
   const set = (field, val) => {
-    const next = { ...m, [field]: val }
-    onUpdate({ meds: next })
+    // Functional form so rapid morning→evening taps don't stomp each other.
+    onUpdate(prev => ({ meds: { ...(prev.meds || {}), [field]: val } }))
   }
 
   const renderMed = (label, field) => (
@@ -333,7 +333,11 @@ function EnergySection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
 // ─── Water ──────────────────────────────────────────────────────────────────
 function WaterSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
   const count = daily?.water?.count || 0
-  const set = (n) => onUpdate({ water: { count: Math.max(0, Math.min(8, n)) } })
+  const setAbsolute = (n) => onUpdate({ water: { count: Math.max(0, Math.min(8, n)) } })
+  // +/− need the freshest count so rapid taps can't double-decrement / stall.
+  const adjust = (delta) => onUpdate(prev => ({
+    water: { count: Math.max(0, Math.min(8, (prev.water?.count || 0) + delta)) },
+  }))
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
       <BackToHomeBanner show={count > 0 && fromHome} onGoHome={onGoHome} />
@@ -342,15 +346,15 @@ function WaterSection({ daily, onUpdate, onToast, fromHome, onGoHome }) {
         <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 900, color: C.blue, marginBottom: 16 }}>{count}/8 glasses</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
           {Array.from({ length: 8 }, (_, i) => (
-            <button key={i} onClick={() => set(i < count ? i : i + 1)} style={{ aspectRatio: '1', borderRadius: 16, border: `2px solid ${i < count ? C.blue : '#F0E8E0'}`, background: i < count ? C.blueBg : 'white', fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button key={i} onClick={() => setAbsolute(i < count ? i : i + 1)} style={{ aspectRatio: '1', borderRadius: 16, border: `2px solid ${i < count ? C.blue : '#F0E8E0'}`, background: i < count ? C.blueBg : 'white', fontSize: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {i < count ? '💧' : '○'}
             </button>
           ))}
         </div>
         {count >= 8 && <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 900, color: C.blue, marginBottom: 12 }}>🎉 You hit your water goal!</div>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => set(count - 1)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: C.text, fontSize: 18, fontWeight: 900, cursor: 'pointer' }}>−</button>
-          <button onClick={() => set(count + 1)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: C.blue, color: 'white', fontSize: 18, fontWeight: 900, cursor: 'pointer' }}>+</button>
+          <button onClick={() => adjust(-1)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: '#F0E8E0', color: C.text, fontSize: 18, fontWeight: 900, cursor: 'pointer' }}>−</button>
+          <button onClick={() => adjust(1)} style={{ flex: 1, padding: '14px', borderRadius: 14, border: 'none', background: C.blue, color: 'white', fontSize: 18, fontWeight: 900, cursor: 'pointer' }}>+</button>
         </div>
       </div>
     </div>
@@ -460,7 +464,16 @@ function WeeklySection({ profile }) {
   const [result, setResult] = useState(null)
 
   useEffect(() => {
-    storage.get(key).then(d => { if (d) { setExisting(d); setResult(d); if (d.phq2) setPhq2(d.phq2) } })
+    let mounted = true
+    storage.get(key)
+      .then(d => {
+        if (!mounted || !d) return
+        setExisting(d)
+        setResult(d)
+        if (d.phq2) setPhq2(d.phq2)
+      })
+      .catch(() => { /* no weekly data — ignore */ })
+    return () => { mounted = false }
   }, [key])
 
   const setM = (i, v) => setMAnswers(prev => ({ ...prev, [i]: v }))
@@ -906,14 +919,17 @@ function ClinicalCheckIns({ daily, onUpdate }) {
   const spend = d.spending || {}
   const sh = d.selfHarm || {}
 
+  // Functional patches read the freshest `daily` from the setter so rapid
+  // back-to-back toggles can't stomp sibling fields (alcohol then weed
+  // would otherwise both spread the same render's snapshot).
   const setSubstance = (key, val) => {
-    onUpdate({ substanceUse: { ...sub, [key]: val } })
+    onUpdate(prev => ({ substanceUse: { ...(prev.substanceUse || {}), [key]: val } }))
   }
   const setSpending = (key, val) => {
-    onUpdate({ spending: { ...spend, [key]: val } })
+    onUpdate(prev => ({ spending: { ...(prev.spending || {}), [key]: val } }))
   }
   const setSelfHarm = (key, val) => {
-    onUpdate({ selfHarm: { ...sh, [key]: val } })
+    onUpdate(prev => ({ selfHarm: { ...(prev.selfHarm || {}), [key]: val } }))
   }
 
   return (

@@ -19,28 +19,34 @@ export default function SpeechBubble({ message, onDismiss }) {
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
   const timerRef = useRef(null)
+  const closeTimerRef = useRef(null)
 
   useEffect(() => {
     if (!message) return
     setClosing(false)
     setVisible(true)
 
-    // Auto-dismiss after 4.5s
+    // Auto-dismiss after 4.5s — track the inner fade-out timer too so it
+    // can be cleared on unmount or when `message` changes.
     timerRef.current = setTimeout(() => {
       setClosing(true)
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setVisible(false)
         onDismiss?.()
       }, 300)
     }, 4500)
 
-    return () => clearTimeout(timerRef.current)
+    return () => {
+      clearTimeout(timerRef.current)
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
   }, [message, onDismiss])
 
   const dismiss = () => {
     clearTimeout(timerRef.current)
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     setClosing(true)
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
       setVisible(false)
       onDismiss?.()
     }, 200)
@@ -96,19 +102,24 @@ export default function SpeechBubble({ message, onDismiss }) {
 export function useIdleBubble() {
   const [idleMsg, setIdleMsg] = useState(null)
   const idxRef = useRef(0)
+  const nextRef = useRef(null)
 
   useEffect(() => {
     // Show first idle message after 5s
     const first = setTimeout(() => {
       setIdleMsg(IDLE_MESSAGES[idxRef.current % IDLE_MESSAGES.length])
     }, 5000)
-    return () => clearTimeout(first)
+    return () => {
+      clearTimeout(first)
+      if (nextRef.current) clearTimeout(nextRef.current)
+    }
   }, [])
 
   const handleDismiss = () => {
     setIdleMsg(null)
-    // Next idle message in 45s
-    setTimeout(() => {
+    // Next idle message in 45s — track the timeout so unmount can cancel it.
+    if (nextRef.current) clearTimeout(nextRef.current)
+    nextRef.current = setTimeout(() => {
       idxRef.current++
       setIdleMsg(IDLE_MESSAGES[idxRef.current % IDLE_MESSAGES.length])
     }, 45000)

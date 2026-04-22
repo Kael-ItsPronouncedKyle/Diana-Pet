@@ -147,7 +147,8 @@ export default function App() {
 
   const updateProfile = useCallback((patch) => {
     setProfile(prev => {
-      const next = { ...prev, ...patch }
+      const resolved = typeof patch === 'function' ? patch(prev || {}) : patch
+      const next = { ...(prev || {}), ...resolved }
       // Persist outside updater to properly await async encryption
       storage.set('diana-profile', next).catch(() => {})
       return next
@@ -168,10 +169,13 @@ export default function App() {
 
   const updateDaily = useCallback((patch) => {
     let nextValue = null
+    let resolvedPatch = null
     setDaily(prev => {
-      const next = { ...prev, ...patch }
-      // Store prev/next for UI side effects (run in useEffect below)
-      pendingEffectsRef.current = { prev, next, patch }
+      // Functional form lets callers avoid stale-closure stomping when
+      // multiple rapid taps share the same render's `daily` snapshot.
+      resolvedPatch = typeof patch === 'function' ? patch(prev || {}) : patch
+      const next = { ...prev, ...resolvedPatch }
+      pendingEffectsRef.current = { prev, next, patch: resolvedPatch }
       nextValue = next
       return next
     })

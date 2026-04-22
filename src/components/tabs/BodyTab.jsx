@@ -549,73 +549,140 @@ function WeeklySection({ profile }) {
     </div>
   )
 
+  // Paginated flow — turns 19+ questions on one scroll into 3 bounded
+  // pages with dot progress. Schizo page only appears if the module is on.
+  // Page order: mood (mania) → sadness (depression + PHQ-2) → brain.
+  const pages = ['mood', 'sadness']
+  if (profile?.schizoModule) pages.push('brain')
+  const [pageIdx, setPageIdx] = useState(0)
+  const page = pages[pageIdx]
+  const isLastPage = pageIdx === pages.length - 1
+
+  const moodComplete = Object.keys(mAnswers).length >= MANIA_Q.length
+  const sadnessComplete = Object.keys(dAnswers).length >= DEPRESSION_Q.length && phq2Complete
+  const brainComplete = !profile?.schizoModule || Object.keys(sAnswers).length >= SCHIZO_Q.length
+  const canAdvance = (page === 'mood' && moodComplete) ||
+                     (page === 'sadness' && sadnessComplete) ||
+                     (page === 'brain' && brainComplete)
+
+  const primaryBtn = (enabled) => ({
+    width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+    background: enabled ? C.primary : '#E0E0E0', color: 'white',
+    fontSize: 16, fontWeight: 800, cursor: enabled ? 'pointer' : 'not-allowed',
+  })
+
   return (
     <div style={{ animation: 'fade-up 0.25s ease-out' }}>
+      {/* Intro + dot progress */}
       <div style={{ ...card, background: C.primaryLight, border: `2px solid ${C.primary}` }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>Let's do a weekly mood check. These questions help you and your team spot shifts early. There are no wrong answers.</p>
-      </div>
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Mood Check</div>
-        {renderQ(MANIA_Q, mAnswers, setM, C.yellow)}
-      </div>
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Low Mood Check</div>
-        <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 12 }}>Bipolar has two sides. Let's check the other one too.</p>
-        {renderQ(DEPRESSION_Q, dAnswers, setD, C.blue)}
-      </div>
-      {/* PHQ-2 Sadness Screen */}
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>Sadness Check</div>
-        <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 14 }}>Two quick questions about how sad you felt this week.</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {PHQ2_QUESTIONS.map((q, qi) => {
-            const qKey = qi === 0 ? 'q1' : 'q2'
-            return (
-              <div key={qi} style={{ background: 'white', borderRadius: 16, padding: '14px' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 10, lineHeight: 1.5 }}>{q}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {PHQ2_OPTIONS.map(opt => (
-                    <button
-                      key={opt.v}
-                      onClick={() => setPhq2(prev => ({ ...prev, [qKey]: opt.v }))}
-                      style={{
-                        padding: '10px 8px', borderRadius: 12,
-                        border: `2px solid ${phq2[qKey] === opt.v ? C.blue : '#F0E8E0'}`,
-                        background: phq2[qKey] === opt.v ? C.blue + '22' : 'white',
-                        color: phq2[qKey] === opt.v ? C.blue : C.text,
-                        fontSize: 13, fontWeight: 700, cursor: 'pointer', minHeight: 44,
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
+        <p style={{ fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.5, margin: 0 }}>
+          Let's do a weekly mood check. These questions help you and your team spot shifts early. There are no wrong answers.
+        </p>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 12 }}>
+          {pages.map((_, i) => (
+            <div key={i} style={{
+              width: i <= pageIdx ? 24 : 10, height: 10, borderRadius: 5,
+              background: i <= pageIdx ? C.primary : '#F0E8E0',
+              transition: 'all 0.2s',
+            }} />
+          ))}
         </div>
-        {phq2Complete && phq2Total >= 3 && (
-          <div style={{ marginTop: 14, background: C.yellowBg, borderRadius: 14, padding: '12px 14px', border: `2px solid ${C.yellow}` }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.5 }}>
-              💛 It sounds like things have been really hard. Talking to your therapist about this could help.
-            </p>
-          </div>
-        )}
+        <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: C.textLight, marginTop: 8 }}>
+          Part {pageIdx + 1} of {pages.length}
+        </div>
       </div>
-      {profile?.schizoModule && (
+
+      {page === 'mood' && (
+        <div style={card}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Mood Check</div>
+          {renderQ(MANIA_Q, mAnswers, setM, C.yellow)}
+        </div>
+      )}
+
+      {page === 'sadness' && (
+        <>
+          <div style={card}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Low Mood Check</div>
+            <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 12 }}>Bipolar has two sides. Let's check the other one too.</p>
+            {renderQ(DEPRESSION_Q, dAnswers, setD, C.blue)}
+          </div>
+          <div style={card}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>Sadness Check</div>
+            <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 14 }}>Two quick questions about how sad you felt this week.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {PHQ2_QUESTIONS.map((q, qi) => {
+                const qKey = qi === 0 ? 'q1' : 'q2'
+                return (
+                  <div key={qi} style={{ background: 'white', borderRadius: 16, padding: '14px' }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 10, lineHeight: 1.5 }}>{q}</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {PHQ2_OPTIONS.map(opt => (
+                        <button
+                          key={opt.v}
+                          onClick={() => setPhq2(prev => ({ ...prev, [qKey]: opt.v }))}
+                          style={{
+                            padding: '10px 8px', borderRadius: 12,
+                            border: `2px solid ${phq2[qKey] === opt.v ? C.blue : '#F0E8E0'}`,
+                            background: phq2[qKey] === opt.v ? C.blue + '22' : 'white',
+                            color: phq2[qKey] === opt.v ? C.blue : C.text,
+                            fontSize: 13, fontWeight: 700, cursor: 'pointer', minHeight: 44,
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {phq2Complete && phq2Total >= 3 && (
+              <div style={{ marginTop: 14, background: C.yellowBg, borderRadius: 14, padding: '12px 14px', border: `2px solid ${C.yellow}` }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.5 }}>
+                  💛 It sounds like things have been really hard. Talking to your therapist about this could help.
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {page === 'brain' && profile?.schizoModule && (
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14 }}>Brain Check-in</div>
           <p style={{ fontSize: 13, color: C.textLight, fontWeight: 600, marginBottom: 12 }}>Let's check in on how your brain is doing this week. Just notice — no judgment.</p>
           {renderQ(SCHIZO_Q, sAnswers, setS, C.blue)}
         </div>
       )}
-      <button
-        onClick={submit}
-        disabled={Object.keys(mAnswers).length < MANIA_Q.length || Object.keys(dAnswers).length < DEPRESSION_Q.length}
-        style={{ width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: (Object.keys(mAnswers).length >= MANIA_Q.length && Object.keys(dAnswers).length >= DEPRESSION_Q.length) ? C.primary : '#E0E0E0', color: 'white', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 20 }}
-      >
-        Submit weekly check-in →
-      </button>
+
+      {/* Back / Next or Submit */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        {pageIdx > 0 && (
+          <button
+            onClick={() => setPageIdx(i => i - 1)}
+            style={{ flex: 1, padding: '16px', borderRadius: 16, border: '2px solid rgba(61,53,53,0.1)', background: 'var(--card)', color: C.text, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+          >
+            ← Back
+          </button>
+        )}
+        {!isLastPage ? (
+          <button
+            onClick={() => canAdvance && setPageIdx(i => i + 1)}
+            disabled={!canAdvance}
+            style={{ ...primaryBtn(canAdvance), flex: pageIdx > 0 ? 2 : 1 }}
+          >
+            Next →
+          </button>
+        ) : (
+          <button
+            onClick={submit}
+            disabled={!canAdvance}
+            style={{ ...primaryBtn(canAdvance), flex: pageIdx > 0 ? 2 : 1 }}
+          >
+            Submit weekly check-in ✓
+          </button>
+        )}
+      </div>
     </div>
   )
 }

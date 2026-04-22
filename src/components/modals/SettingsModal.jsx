@@ -17,6 +17,7 @@ const card = {
 export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdate, darkMode, onToggleDarkMode, hapticsOn = true, onToggleHaptics }) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmReset2, setConfirmReset2] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [crisisKael, setCrisisKael] = useState(profile?.crisisContacts?.kael || '')
   const [crisisLuis, setCrisisLuis] = useState(profile?.crisisContacts?.luis || '')
   const [creatureName, setCreatureName] = useState(profile?.creatureName || '')
@@ -364,11 +365,39 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
                 {saved ? 'Saved! ✓' : 'Save settings'}
               </button>
 
-              {/* Sign out */}
+              {/* Sign out — two-tap confirm so a stray finger doesn't dump
+                  the session and make it look like everything was deleted. */}
               {supabaseEnabled && (
-                <button onClick={signOut} style={{ width: '100%', padding: '16px', borderRadius: 16, border: '2px solid rgba(61,53,53,0.1)', background: 'var(--card)', color: 'var(--text)', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginBottom: 14 }}>
-                  Sign out
-                </button>
+                <div style={{ marginBottom: 14 }}>
+                  {!confirmSignOut ? (
+                    <button
+                      onClick={() => setConfirmSignOut(true)}
+                      style={{ width: '100%', padding: '16px', borderRadius: 16, border: '2px solid rgba(61,53,53,0.1)', background: 'var(--card)', color: 'var(--text)', fontSize: 16, fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      Sign out
+                    </button>
+                  ) : (
+                    <div style={{ ...card, border: '2px solid rgba(61,53,53,0.15)', background: 'var(--bg)', marginBottom: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 10, lineHeight: 1.5 }}>
+                        Sign out? Your stuff stays safe — you just need to sign back in to see it.
+                      </p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => setConfirmSignOut(false)}
+                          style={{ flex: 1, padding: '12px', borderRadius: 14, border: 'none', background: 'rgba(61,53,53,0.1)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={signOut}
+                          style={{ flex: 1, padding: '12px', borderRadius: 14, border: 'none', background: 'var(--primary)', color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Yes, sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Reset */}

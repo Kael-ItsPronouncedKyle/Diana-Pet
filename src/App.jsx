@@ -9,6 +9,7 @@ import { MiniPet } from './components/Pet/Pet.jsx'
 import BottomNav from './components/shared/BottomNav.jsx'
 import Toast from './components/shared/Toast.jsx'
 import Confetti from './components/shared/Confetti.jsx'
+import SitMode from './components/shared/SitMode.jsx'
 import OnboardingFlow from './components/modals/OnboardingFlow.jsx'
 import AuthModal from './components/modals/AuthModal.jsx'
 import CrisisToolkit, { CrisisButton } from './components/modals/CrisisToolkit.jsx'
@@ -46,6 +47,7 @@ export default function App() {
   const [fromHome, setFromHome] = useState(false)
   const [showCrisis, setShowCrisis] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showSitMode, setShowSitMode] = useState(false)
   const [toastMsg, setToastMsg] = useState(null)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [creatureReaction, setCreatureReaction] = useState(null)
@@ -370,6 +372,7 @@ export default function App() {
             onToast={showToast}
             creatureReaction={creatureReaction}
             onOpenCrisis={() => setShowCrisis(true)}
+            onOpenSit={() => setShowSitMode(true)}
           />
         )
       case 'checkins':
@@ -478,6 +481,14 @@ export default function App() {
         hapticsOn={hapticsOn}
         onToggleHaptics={toggleHaptics}
       />
+      {showSitMode && (
+        <SitMode
+          creatureId={profile?.creature}
+          moodState={moodState}
+          daily={daily}
+          onClose={() => setShowSitMode(false)}
+        />
+      )}
     </div>
   )
 }

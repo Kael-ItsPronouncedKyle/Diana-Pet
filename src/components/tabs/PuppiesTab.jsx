@@ -260,16 +260,20 @@ function DogSection({ dog, dogKey, daily, onUpdate, onToast, phase }) {
 
 export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, onToast, fromHome, onGoHome }) {
   const [activeDog, setActiveDog] = useState('apollo')
+  const [showPhasePreview, setShowPhasePreview] = useState(false)
   const phase = profile?.puppyPhase || 1
   const phaseData = PUPPY_DATA.phases.find(p => p.phase === phase)
 
   const phaseStartDate = profile?.puppyPhaseStartDate ? new Date(profile.puppyPhaseStartDate) : new Date()
   const weeksInPhase = Math.floor((Date.now() - phaseStartDate.getTime()) / (7 * 86400000))
   const canAdvance = phase < 3 && weeksInPhase >= (phaseData?.minimumWeeks || 4)
+  const nextPhaseData = PUPPY_DATA.phases.find(p => p.phase === phase + 1)
 
-  const advancePhase = () => {
+  const confirmAdvancePhase = () => {
     if (canAdvance && onProfileUpdate) {
       onProfileUpdate({ puppyPhase: phase + 1, puppyPhaseStartDate: today() })
+      setShowPhasePreview(false)
+      onToast?.(`🎉 Welcome to Phase ${phase + 1}!`)
     }
   }
 
@@ -295,7 +299,7 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
             </div>
             {canAdvance && (
               <button
-                onClick={advancePhase}
+                onClick={() => setShowPhasePreview(true)}
                 style={{
                   padding: '12px 16px',
                   borderRadius: 14,
@@ -309,7 +313,7 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
                   whiteSpace: 'nowrap'
                 }}
               >
-                Next phase
+                See next phase
               </button>
             )}
           </div>
@@ -379,6 +383,115 @@ export default function PuppiesTab({ daily, onUpdate, profile, onProfileUpdate, 
           phase={phase}
         />
       </div>
+
+      {/* Phase preview modal — opens when she taps "See next phase" so she
+          knows what she's walking into before committing. AuDHD-predictable. */}
+      {showPhasePreview && nextPhaseData && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(61,53,53,0.6)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+          onClick={e => e.target === e.currentTarget && setShowPhasePreview(false)}
+        >
+          <div style={{
+            background: 'var(--bg, #FFF8F3)', width: '100%', maxWidth: 430,
+            borderRadius: '24px 24px 0 0', maxHeight: '85vh',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            animation: 'fade-up 0.25s ease-out',
+          }}>
+            <div style={{ padding: '20px 20px 8px' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--primary)', letterSpacing: 0.5, marginBottom: 4 }}>
+                PHASE {nextPhaseData.phase} PREVIEW
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', marginBottom: 4 }}>
+                {nextPhaseData.title}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light)' }}>
+                Weeks {nextPhaseData.weeks} • at least {nextPhaseData.minimumWeeks} weeks
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+              <div style={{
+                background: 'var(--primary-light)', borderRadius: 14,
+                padding: '14px 16px', marginBottom: 14, border: '1px solid #D6EEEB',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary)', marginBottom: 6 }}>What this phase is for</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5 }}>
+                  {nextPhaseData.goal}
+                </div>
+              </div>
+
+              {/* Skills the dogs will work on */}
+              {nextPhaseData.skills?.both?.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-light)', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+                    Both dogs — {nextPhaseData.skills.both.length} skills
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {nextPhaseData.skills.both.slice(0, 5).map(s => (
+                      <div key={s.id} style={{ background: 'white', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                        {s.name}
+                      </div>
+                    ))}
+                    {nextPhaseData.skills.both.length > 5 && (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-light)', textAlign: 'center' }}>
+                        + {nextPhaseData.skills.both.length - 5} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {nextPhaseData.skills?.apollo?.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-light)', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+                    🐾 Apollo — extra things
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {nextPhaseData.skills.apollo.map(s => (
+                      <div key={s.id} style={{ background: 'white', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                        {s.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {nextPhaseData.skills?.artemis?.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-light)', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+                    ⭐ Artemis — extra things
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {nextPhaseData.skills.artemis.map(s => (
+                      <div key={s.id} style={{ background: 'white', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                        {s.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 20px 20px', borderTop: '1px solid rgba(61,53,53,0.08)', display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setShowPhasePreview(false)}
+                style={{ flex: 1, padding: '14px', borderRadius: 14, border: '2px solid rgba(61,53,53,0.1)', background: 'var(--card, white)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Not yet
+              </button>
+              <button
+                onClick={confirmAdvancePhase}
+                style={{ flex: 2, padding: '14px', borderRadius: 14, border: 'none', background: 'var(--primary)', color: 'white', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+              >
+                Ready — start Phase {nextPhaseData.phase}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

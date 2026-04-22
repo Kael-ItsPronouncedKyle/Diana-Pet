@@ -17,35 +17,38 @@ import GoalTracker from '../checkins/GoalTracker.jsx'
  * Back button returns to the tile grid.
  */
 
-// All check-in tiles organized into two groups
+// All check-in tiles organized into two groups.
+// `label` is the plain-language name (3rd-grade friendly). `sub` is the
+// clinical term the section itself uses — shown small so Diana can map
+// the familiar tile to the language her care team uses.
 const RECOVERY_TILES = [
-  { key: 'circles', emoji: '⭕', label: 'Circles', color: '#6BBF8A', bg: '#E6F7EC', source: 'recovery' },
-  { key: 'feelings', emoji: '🎭', label: 'Feelings', color: '#E8907E', bg: '#FDE8E4', source: 'recovery' },
-  { key: 'dbt', emoji: '💚', label: 'DBT Skill', color: '#6BA89E', bg: '#E8F4F1', source: 'recovery' },
-  { key: 'urges', emoji: '🔴', label: 'Urges', color: '#E87B7B', bg: '#FDECEC', source: 'recovery' },
-  { key: 'chain', emoji: '🔗', label: 'Chain', color: '#6BA8D6', bg: '#E8F1FA', source: 'recovery' },
-  { key: 'connection', emoji: '💜', label: 'Connect', color: '#6BA89E', bg: '#E8F4F1', source: 'recovery' },
+  { key: 'circles', emoji: '⭕', label: 'Circles', sub: 'green / yellow / red', color: '#6BBF8A', bg: '#E6F7EC', source: 'recovery' },
+  { key: 'feelings', emoji: '🎭', label: 'Feelings', sub: 'what I feel', color: '#E8907E', bg: '#FDE8E4', source: 'recovery' },
+  { key: 'dbt', emoji: '💚', label: 'Skill', sub: 'today’s DBT', color: '#6BA89E', bg: '#E8F4F1', source: 'recovery' },
+  { key: 'urges', emoji: '🔴', label: 'Urges', sub: 'what I wanted', color: '#E87B7B', bg: '#FDECEC', source: 'recovery' },
+  { key: 'chain', emoji: '🔗', label: 'What happened', sub: 'chain analysis', color: '#6BA8D6', bg: '#E8F1FA', source: 'recovery' },
+  { key: 'connection', emoji: '💜', label: 'Connect', sub: 'people today', color: '#6BA89E', bg: '#E8F4F1', source: 'recovery' },
 ]
 
 const BODY_TILES = [
-  { key: 'sleep', emoji: '😴', label: 'Sleep', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
-  { key: 'meds', emoji: '💊', label: 'Meds', color: '#6BA89E', bg: '#E8F4F1', source: 'body' },
-  { key: 'meals', emoji: '🍽️', label: 'Meals', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
-  { key: 'energy', emoji: '⚡', label: 'Energy', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
-  { key: 'water', emoji: '💧', label: 'Water', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
-  { key: 'window', emoji: '🧠', label: 'Window', color: '#6BA89E', bg: '#E8F4F1', source: 'body' },
-  { key: 'sensory', emoji: '🧠', label: 'Sensory', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
-  { key: 'dissociation', emoji: '🌫', label: 'Present?', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
-  { key: 'bodySelf', emoji: '💜', label: 'Body Check', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
-  { key: 'weekly', emoji: '📋', label: 'Weekly', color: '#F0C050', bg: '#FFF8E1', source: 'body' },
+  { key: 'sleep', emoji: '😴', label: 'Sleep', sub: 'last night', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
+  { key: 'meds', emoji: '💊', label: 'Meds', sub: 'did I take them', color: '#6BA89E', bg: '#E8F4F1', source: 'body' },
+  { key: 'meals', emoji: '🍽️', label: 'Meals', sub: 'did I eat', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
+  { key: 'energy', emoji: '⚡', label: 'Energy', sub: 'how I feel', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
+  { key: 'water', emoji: '💧', label: 'Water', sub: 'glasses today', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
+  { key: 'window', emoji: '🧠', label: 'How I feel inside', sub: 'window of tolerance', color: '#6BA89E', bg: '#E8F4F1', source: 'body' },
+  { key: 'sensory', emoji: '🔊', label: 'Too much?', sub: 'sensory load', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
+  { key: 'dissociation', emoji: '🌫', label: 'Here or far?', sub: 'dissociation', color: '#6BA8D6', bg: '#E8F1FA', source: 'body' },
+  { key: 'bodySelf', emoji: '💜', label: 'My body today', sub: 'body-self', color: '#E8907E', bg: '#FDE8E4', source: 'body' },
+  { key: 'weekly', emoji: '📋', label: 'Weekly', sub: 'mood check-in', color: '#F0C050', bg: '#FFF8E1', source: 'body' },
 ]
 
 const LIFE_TILES = [
-  { key: 'wins', emoji: '🌟', label: 'Wins', color: '#F0C050', bg: '#FFF8E1', source: 'life' },
-  { key: 'reading', emoji: '📚', label: 'Reading', color: '#6BA8D6', bg: '#E8F1FA', source: 'life' },
-  { key: 'custom', emoji: '✨', label: 'My Trackers', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
-  { key: 'schedule', emoji: '🗓️', label: 'Today', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
-  { key: 'goals', emoji: '🎯', label: 'Goals', color: '#E8907E', bg: '#FDE8E4', source: 'life' },
+  { key: 'wins', emoji: '🌟', label: 'Wins', sub: 'good things', color: '#F0C050', bg: '#FFF8E1', source: 'life' },
+  { key: 'reading', emoji: '📚', label: 'Reading', sub: 'what I read', color: '#6BA8D6', bg: '#E8F1FA', source: 'life' },
+  { key: 'custom', emoji: '✨', label: 'My Trackers', sub: 'daily habits', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
+  { key: 'schedule', emoji: '🗓️', label: 'Today', sub: 'my schedule', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
+  { key: 'goals', emoji: '🎯', label: 'Goals', sub: 'what I’m working on', color: '#E8907E', bg: '#FDE8E4', source: 'life' },
 ]
 
 const ALL_TILES = [...RECOVERY_TILES, ...BODY_TILES, ...LIFE_TILES]
@@ -157,6 +160,54 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
   // Default: tile grid view
   const doneCount = ALL_TILES.filter(t => isDone(t.key, daily)).length
 
+  // Single tile renderer — keeps the three grids in sync when we tweak size,
+  // subtitle, "done" indicator, etc. Plain-language `label` sits above the
+  // clinical `sub` so Diana sees the warm word first.
+  const Tile = ({ tile }) => {
+    const done = isDone(tile.key, daily)
+    return (
+      <button
+        key={tile.key}
+        onClick={() => { tapFeedback(); setActiveSub(tile.key) }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 4,
+          padding: '12px 6px',
+          borderRadius: 16,
+          border: `2px solid ${done ? tile.color : '#F0E8E0'}`,
+          background: done ? tile.bg : 'var(--card, white)',
+          cursor: 'pointer',
+          minHeight: 96,
+          boxShadow: '0 2px 8px rgba(61,53,53,0.04)',
+          transition: 'transform 0.1s, border-color 0.2s',
+        }}
+      >
+        <span style={{ fontSize: 24, lineHeight: 1 }}>{tile.emoji}</span>
+        <span style={{
+          fontSize: 11, fontWeight: 800,
+          color: done ? tile.color : 'var(--text, #3D3535)',
+          textAlign: 'center', lineHeight: 1.2,
+        }}>
+          {tile.label}
+        </span>
+        {tile.sub && (
+          <span style={{
+            fontSize: 9, fontWeight: 600,
+            color: 'var(--text-light, #8A7F7F)',
+            textAlign: 'center', lineHeight: 1.2,
+            maxWidth: '100%',
+          }}>
+            {tile.sub}
+          </span>
+        )}
+        {done && <span style={{ fontSize: 9, fontWeight: 700, color: tile.color }}>Done</span>}
+      </button>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px' }}>
@@ -195,38 +246,7 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 10,
           }}>
-            {RECOVERY_TILES.map(tile => {
-              const done = isDone(tile.key, daily)
-              return (
-                <button
-                  key={tile.key}
-                  onClick={() => { tapFeedback(); setActiveSub(tile.key) }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '16px 8px',
-                    borderRadius: 16,
-                    border: `2px solid ${done ? tile.color : '#F0E8E0'}`,
-                    background: done ? tile.bg : 'var(--card, white)',
-                    cursor: 'pointer',
-                    minHeight: 80,
-                    boxShadow: '0 2px 8px rgba(61,53,53,0.04)',
-                    transition: 'transform 0.1s, border-color 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>{tile.emoji}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: done ? tile.color : 'var(--text, #3D3535)',
-                  }}>
-                    {tile.label}
-                  </span>
-                  {done && <span style={{ fontSize: 10, color: tile.color }}>Done</span>}
-                </button>
-              )
-            })}
+            {RECOVERY_TILES.map(tile => <Tile key={tile.key} tile={tile} />)}
           </div>
         </div>
 
@@ -244,38 +264,7 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 10,
           }}>
-            {BODY_TILES.map(tile => {
-              const done = isDone(tile.key, daily)
-              return (
-                <button
-                  key={tile.key}
-                  onClick={() => { tapFeedback(); setActiveSub(tile.key) }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '16px 8px',
-                    borderRadius: 16,
-                    border: `2px solid ${done ? tile.color : '#F0E8E0'}`,
-                    background: done ? tile.bg : 'var(--card, white)',
-                    cursor: 'pointer',
-                    minHeight: 80,
-                    boxShadow: '0 2px 8px rgba(61,53,53,0.04)',
-                    transition: 'transform 0.1s, border-color 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>{tile.emoji}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: done ? tile.color : 'var(--text, #3D3535)',
-                  }}>
-                    {tile.label}
-                  </span>
-                  {done && <span style={{ fontSize: 10, color: tile.color }}>Done</span>}
-                </button>
-              )
-            })}
+            {BODY_TILES.map(tile => <Tile key={tile.key} tile={tile} />)}
           </div>
         </div>
 
@@ -293,38 +282,7 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 10,
           }}>
-            {LIFE_TILES.map(tile => {
-              const done = isDone(tile.key, daily)
-              return (
-                <button
-                  key={tile.key}
-                  onClick={() => { tapFeedback(); setActiveSub(tile.key) }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '16px 8px',
-                    borderRadius: 16,
-                    border: `2px solid ${done ? tile.color : '#F0E8E0'}`,
-                    background: done ? tile.bg : 'var(--card, white)',
-                    cursor: 'pointer',
-                    minHeight: 80,
-                    boxShadow: '0 2px 8px rgba(61,53,53,0.04)',
-                    transition: 'transform 0.1s, border-color 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>{tile.emoji}</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: done ? tile.color : 'var(--text, #3D3535)',
-                  }}>
-                    {tile.label}
-                  </span>
-                  {done && <span style={{ fontSize: 10, color: tile.color }}>Done</span>}
-                </button>
-              )
-            })}
+            {LIFE_TILES.map(tile => <Tile key={tile.key} tile={tile} />)}
           </div>
         </div>
       </div>

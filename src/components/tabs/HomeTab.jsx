@@ -100,7 +100,7 @@ function CheckInRow({ label, emoji, done, onClick }) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast, creatureReaction, onOpenCrisis }) {
+export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast, creatureReaction, onOpenCrisis, onOpenSit }) {
   const timeOfDay = getTimeOfDay()
   const flow = TIME_FLOWS[timeOfDay]
   const checkInCount = countCheckIns(daily)
@@ -203,11 +203,36 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
     onUpdate({ dropoutBannerSeen: true })
   }
 
-  // Determine next action
+  // Is Diana in a crashed state right now? ME/CFS crashes and low-energy
+  // moments mean the app should stop pushing more check-ins at her — the
+  // "just rest" card below is the non-pushy alternative.
+  const isCrashed = useMemo(() => {
+    if (daily?.energy !== undefined && daily.energy <= 2) return true
+    if (daily?.crash?.triggered === true) return true
+    if (daily?.window !== undefined && (daily.window <= 2)) return true // hypo zone
+    return false
+  }, [daily?.energy, daily?.crash?.triggered, daily?.window])
+
+  // Determine next action. When crashed, don't nag — surface a soft pick
+  // (water / meds / word of day) rather than "do your energy check-in"
+  // while she's in the energy crash she's trying to rest through.
   const nextAction = useMemo(() => {
-    // Skip items with no tab (like word-of-day, which is rendered inline)
-    return flow.items.find(item => item.tab && !isDone(item.key, daily))
-  }, [daily, timeOfDay, flow])
+    const items = flow.items
+    const undone = items.filter(item => item.tab && !isDone(item.key, daily))
+    if (!undone.length) return null
+    if (isCrashed) {
+      // Prefer low-effort quick-actions first; skip anything that requires
+      // introspection (feelings, sensory, dissociation, bodySelf, circles).
+      const LOW_EFFORT = new Set(['water', 'meds', 'word'])
+      const HEAVY = new Set(['feelings', 'sensory', 'dissociation', 'bodySelf', 'circles', 'chain'])
+      const easy = undone.find(i => LOW_EFFORT.has(i.key))
+      if (easy) return easy
+      const soft = undone.find(i => !HEAVY.has(i.key))
+      if (soft) return soft
+      return null // nothing gentle left — let the rest card take over below
+    }
+    return undone[0]
+  }, [daily, timeOfDay, flow, isCrashed])
 
   const checkInCount_actual = countCheckIns(daily)
   const allDone = checkInCount_actual === TOTAL_CHECKINS
@@ -405,8 +430,15 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
   return (
     <div style={{ padding: '0 20px 100px', animation: 'fade-up 0.25s ease-out' }}>
 
-      {/* 1. CreatureScene */}
-      <div style={{ marginBottom: 12 }}>
+      {/* 1. CreatureScene — tap to "sit with" the creature (third mode between
+           normal check-ins and the crisis toolkit: a quiet pause that still
+           counts as showing up). */}
+      <div
+        style={{ marginBottom: 12, cursor: onOpenSit ? 'pointer' : 'default' }}
+        onClick={() => { if (onOpenSit) { tapFeedback(); onOpenSit() } }}
+        role={onOpenSit ? 'button' : undefined}
+        aria-label={onOpenSit ? 'Sit with your creature' : undefined}
+      >
         <CreatureScene
           creatureId={creatureId}
           moodState={moodState}
@@ -416,6 +448,20 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
           isNightRisk={isNight}
           size={160}
         />
+        {onOpenSit && (
+          <div style={{
+            textAlign: 'center',
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--text-light, #8A7F7F)',
+            marginTop: 4,
+            opacity: 0.7,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+          }}>
+            Tap to sit with me
+          </div>
+        )}
       </div>
 
       {/* 1b. Safety Plan Banner — pinned when critical pattern detected */}
@@ -502,7 +548,9 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
         </div>
       )}
 
-      {/* 1d. Luis Context Banner (T2-07) */}
+      {/* 1d. Day-shape banner (T2-07)
+          Framed around Diana, not Luis — non-negotiable #4.
+          Work day = "You're home alone"; home day = "Luis is around". */}
       {profile?.luisShift && (
         <div style={{ marginBottom: 12 }}>
           {(() => {
@@ -516,10 +564,13 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
                 border: `1.5px solid ${isLuisWorkDay ? 'var(--blue, #6BA8D6)' : 'var(--green, #6BBF8A)'}`,
                 textAlign: 'center',
                 fontSize: 13,
-                fontWeight: 600,
+                fontWeight: 700,
                 color: isLuisWorkDay ? 'var(--blue, #6BA8D6)' : 'var(--green, #6BBF8A)',
+                lineHeight: 1.4,
               }}>
-                {isLuisWorkDay ? '🏢 Luis is at work today' : '🏡 Luis is home today'}
+                {isLuisWorkDay
+                  ? "🏠 You're home on your own today — I'm here."
+                  : '💚 Luis is around today.'}
               </div>
             )
           })()}
@@ -546,7 +597,8 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
         {feedbackMessage}
       </div>
 
-      {/* 3. One Next Action */}
+      {/* 3. One Next Action — or, if Diana is crashed and nothing low-effort
+          is left, a "just rest today" card that still counts as showing up. */}
       {nextAction ? (
         <button
           onClick={handleNextActionTap}
@@ -578,11 +630,28 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
               {nextAction.label}
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', marginTop: 2 }}>
-              Tap to check in
+              {isCrashed ? 'Something small — skip if you need to' : 'Tap to check in'}
             </div>
           </div>
           <div style={{ fontSize: 20, color: 'var(--text-light, #8A7F7F)' }}>→</div>
         </button>
+      ) : isCrashed ? (
+        <div style={{
+          margin: '0 0 16px 0',
+          padding: '20px',
+          borderRadius: 20,
+          background: 'var(--blue-bg, #E8F1FA)',
+          border: '2px solid var(--blue, #6BA8D6)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>💙</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text, #3D3535)', marginBottom: 6 }}>
+            Just rest today.
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-light, #8A7F7F)', lineHeight: 1.5 }}>
+            You showed up. That's the whole check-in. 💚
+          </div>
+        </div>
       ) : (
         <div style={{
           margin: '0 0 16px 0',

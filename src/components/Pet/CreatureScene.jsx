@@ -42,10 +42,21 @@ const SCENES = {
     description: 'Soft evening twilight with gentle stars',
   },
   night: {
-    // Special: 9pm-4am protective mode (darker, calming, safe)
-    gradient: 'linear-gradient(180deg, #1A1A2E 0%, #252540 100%)',
+    // Late-but-not-risk: warmer / moonlit so a ME/CFS wakeup at 2am doesn't
+    // land in a jet-black room. The fully dark "protective" palette moved
+    // to `nightRisk` below and is only shown when isNightRisk is set.
+    gradient: 'linear-gradient(180deg, #E4DCEF 0%, #FFF8F3 100%)',
+    elements: ['🌙', '⭐'],
+    ground: '#E2D9EC',
+    groundElements: ['🌿', '💜'],
+    description: 'Moonlit room, warm and quiet',
+  },
+  nightRisk: {
+    // True protective mode — darker, still warm-edged, only when the
+    // clinical isNightRisk flag is on (9pm-4am risk window).
+    gradient: 'linear-gradient(180deg, #2A2340 0%, #3A3250 100%)',
     elements: ['🌙', '⭐', '✨', '⭐'],
-    ground: '#2A2A45',
+    ground: '#3A3250',
     groundElements: ['🌿', '💙'],
     description: 'Protected night space with calming energy',
   },
@@ -56,7 +67,9 @@ export default function CreatureScene({ creatureId, moodState, streak, reaction,
   // isNightRisk takes priority (protective dark scene)
   // Otherwise use provided timeOfDay or default to 'morning'
   const sceneKey = useMemo(() => {
-    if (isNightRisk) return 'night'
+    // nightRisk is the clinical-risk window (9pm-4am + flagged). Plain
+    // `night` is for the gentler moonlit variant used at evening time.
+    if (isNightRisk) return 'nightRisk'
     return timeOfDay && SCENES[timeOfDay] ? timeOfDay : 'morning'
   }, [isNightRisk, timeOfDay])
 

@@ -100,7 +100,7 @@ function CheckInRow({ label, emoji, done, onClick }) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
-export default function HomeTab({ profile, daily, onNavigate, onEventMessage, onUpdate, onToast, creatureReaction, onCreatureReaction, onMilestone, onOpenCrisis }) {
+export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast, creatureReaction, onOpenCrisis }) {
   const timeOfDay = getTimeOfDay()
   const flow = TIME_FLOWS[timeOfDay]
   const checkInCount = countCheckIns(daily)

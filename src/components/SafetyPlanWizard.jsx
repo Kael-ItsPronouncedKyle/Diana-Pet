@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import storage from '../utils/storage.js'
 
 const C = {
   primary: '#6BA89E', primaryLight: '#E8F4F1',
@@ -182,31 +183,18 @@ function ContactBuilder({ contacts, onAdd, onRemove }) {
 
 const DRAFT_KEY = 'diana-safety-plan-draft'
 
-function loadDraft() {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return null
-}
-
 function saveDraft(plan, step) {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ plan, step }))
-  } catch { /* ignore */ }
+  storage.set(DRAFT_KEY, { plan, step }).catch(() => {})
 }
 
 function clearDraft() {
-  try {
-    localStorage.removeItem(DRAFT_KEY)
-  } catch { /* ignore */ }
+  storage.delete(DRAFT_KEY).catch(() => {})
 }
 
 export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) {
   const existingPlan = profile?.safetyPlan || {}
-  const draft = loadDraft()
-  const hasDraft = draft && draft.plan && Object.values(draft.plan).some(v => Array.isArray(v) && v.length > 0)
-  const [showDraftPrompt, setShowDraftPrompt] = useState(hasDraft)
+  const [draft, setDraft] = useState(null)
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false)
   const [step, setStep] = useState(0)
   const [plan, setPlan] = useState({
     warningSigns: existingPlan.warningSigns || [],
@@ -217,13 +205,28 @@ export default function SafetyPlanWizard({ profile, onProfileUpdate, onClose }) 
     environmentSafe: existingPlan.environmentSafe || [],
   })
 
+  // Load draft asynchronously on mount
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const d = await storage.get(DRAFT_KEY)
+      if (!mounted) return
+      const has = d && d.plan && Object.values(d.plan).some(v => Array.isArray(v) && v.length > 0)
+      if (has) {
+        setDraft(d)
+        setShowDraftPrompt(true)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
   const restoreDraft = useCallback(() => {
     if (draft) {
       setPlan(draft.plan)
       setStep(draft.step || 0)
     }
     setShowDraftPrompt(false)
-  }, []) // draft is read once at mount via loadDraft()
+  }, [draft])
 
   const dismissDraft = useCallback(() => {
     clearDraft()

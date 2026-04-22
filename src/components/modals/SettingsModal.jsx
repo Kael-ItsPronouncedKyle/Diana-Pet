@@ -14,7 +14,7 @@ const card = {
   marginBottom: 16,
 }
 
-export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdate, darkMode, onToggleDarkMode, onToggleHaptics }) {
+export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdate, darkMode, onToggleDarkMode, hapticsOn = true, onToggleHaptics }) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmReset2, setConfirmReset2] = useState(false)
   const [crisisKael, setCrisisKael] = useState(profile?.crisisContacts?.kael || '')
@@ -212,8 +212,8 @@ export default function SettingsModal({ isOpen, onClose, profile, onProfileUpdat
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>📳 Haptic feedback</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-light)' }}>Vibrate on taps and saves</div>
                   </div>
-                  <button onClick={() => onToggleHaptics?.(!(profile?.haptics ?? true))} style={{ width: 56, height: 30, borderRadius: 15, border: 'none', background: (profile?.haptics ?? true) ? 'var(--primary)' : 'rgba(61,53,53,0.2)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
-                    <div style={{ position: 'absolute', top: 3, left: (profile?.haptics ?? true) ? 27 : 3, width: 24, height: 24, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                  <button onClick={() => onToggleHaptics?.(!hapticsOn)} style={{ width: 56, height: 30, borderRadius: 15, border: 'none', background: hapticsOn ? 'var(--primary)' : 'rgba(61,53,53,0.2)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 3, left: hapticsOn ? 27 : 3, width: 24, height: 24, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                   </button>
                 </div>
               </div>

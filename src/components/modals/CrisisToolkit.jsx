@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { CRISIS_PRESENTATION_WARNING } from '../../constants/clinicalConfig.js'
 import ValuesAnchor from '../shared/ValuesAnchor.jsx'
 import KaelVoiceLibrary from '../shared/KaelVoiceLibrary.jsx'
+import storage from '../../utils/storage.js'
 
 // Simplified: 6 categories including Letter from Me and Words from Kael
 const SECTIONS = ['quick-calm', 'safety-plan', 'coping-skills', 'letter', 'kael', 'contacts']
@@ -135,33 +135,35 @@ const COPING_FIELDS = [
 
 const COPING_DRAFT_KEY = 'diana-coping-plan-draft'
 
-function loadCopingDraft() {
-  try {
-    const raw = localStorage.getItem(COPING_DRAFT_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return null
-}
-
 function saveCopingDraft(values) {
-  try {
-    localStorage.setItem(COPING_DRAFT_KEY, JSON.stringify(values))
-  } catch { /* ignore */ }
+  storage.set(COPING_DRAFT_KEY, values).catch(() => {})
 }
 
 function clearCopingDraft() {
-  try {
-    localStorage.removeItem(COPING_DRAFT_KEY)
-  } catch { /* ignore */ }
+  storage.delete(COPING_DRAFT_KEY).catch(() => {})
 }
 
 function CopingPlanSection({ copingPlan, onSave }) {
   const hasPlan = copingPlan && Object.values(copingPlan).some(v => v && v.trim())
-  const draft = loadCopingDraft()
-  const hasDraft = draft && Object.values(draft).some(v => v && v.trim())
+  const [draft, setDraft] = useState(null)
   const [editing, setEditing] = useState(!hasPlan)
   const [values, setValues] = useState(copingPlan || {})
-  const [showDraftPrompt, setShowDraftPrompt] = useState(hasDraft && !hasPlan)
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false)
+
+  // Load any saved draft asynchronously on mount
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const d = await storage.get(COPING_DRAFT_KEY)
+      if (!mounted) return
+      const has = d && Object.values(d).some(v => v && typeof v === 'string' && v.trim())
+      if (has) {
+        setDraft(d)
+        if (!hasPlan) setShowDraftPrompt(true)
+      }
+    })()
+    return () => { mounted = false }
+  }, [hasPlan])
 
   const set = (key, val) => {
     setValues(prev => {

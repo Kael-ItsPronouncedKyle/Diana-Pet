@@ -341,7 +341,8 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, onToast, fromHome, onGoHo
   }
 
   const skipJournal = () => {
-    onUpdate({ circles: { choice: selected, journal: '', timestamp: Date.now() } })
+    // Preserve any journal already saved; the user is just skipping, not erasing.
+    onUpdate({ circles: { choice: selected, journal: daily?.circles?.journal || '', timestamp: Date.now() } })
     if (needsSecrecyTest && secrecyAnswer === null) {
       setShowSecrecyTest(true)
     }
@@ -470,7 +471,7 @@ function ThreeCircles({ daily, onUpdate, onOpenCrisis, onToast, fromHome, onGoHo
       )}
 
       {/* Chain analysis prompt — after inner circle + secrecy test complete */}
-      {selected === 'inner' && circlesDone && !daily?.chainAnalysis && onNavigateToChain && (
+      {selected === 'inner' && circlesDone && !(daily?.chains?.length) && onNavigateToChain && (
         <div style={{ background: '#E8F1FA', borderRadius: 20, padding: '18px', border: '2px solid #6BA8D6', animation: 'fade-up 0.2s ease-out', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#3D3535', marginBottom: 8 }}>
             Want to walk through what happened?
@@ -513,8 +514,9 @@ function DbtSkill({ daily, onUpdate, onToast, fromHome, onGoHome }) {
 
   // T1-14: Skill effectiveness tracking
   const rateSkill = async (effective) => {
-    onUpdate({ dbt: { ...daily?.dbt, effective } })
-    // Update profile skill effectiveness stats
+    // Always keep skillId/practiced pinned — don't rely on a race with a
+    // still-propagating markPracticed() write.
+    onUpdate({ dbt: { ...(daily?.dbt || {}), skillId: skill.id, practiced: true, effective } })
     const history = (await storage.get('diana-dbt-history')) || []
     const last = history[history.length - 1]
     if (last) last.effective = effective

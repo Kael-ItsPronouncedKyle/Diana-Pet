@@ -6,6 +6,8 @@ import { tapFeedback } from '../../utils/haptics.js'
 import ReadingSection from '../checkins/ReadingSection.jsx'
 import WinsSection from '../checkins/WinsSection.jsx'
 import CustomTrackersSection from '../checkins/CustomTrackersSection.jsx'
+import DailySchedule from '../checkins/DailySchedule.jsx'
+import GoalTracker from '../checkins/GoalTracker.jsx'
 
 /**
  * CheckinsTab — Merged Recovery + Body tab
@@ -42,6 +44,8 @@ const LIFE_TILES = [
   { key: 'wins', emoji: '🌟', label: 'Wins', color: '#F0C050', bg: '#FFF8E1', source: 'life' },
   { key: 'reading', emoji: '📚', label: 'Reading', color: '#6BA8D6', bg: '#E8F1FA', source: 'life' },
   { key: 'custom', emoji: '✨', label: 'My Trackers', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
+  { key: 'schedule', emoji: '🗓️', label: 'Today', color: '#6BA89E', bg: '#E8F4F1', source: 'life' },
+  { key: 'goals', emoji: '🎯', label: 'Goals', color: '#E8907E', bg: '#FDE8E4', source: 'life' },
 ]
 
 const ALL_TILES = [...RECOVERY_TILES, ...BODY_TILES, ...LIFE_TILES]
@@ -61,13 +65,14 @@ function isDone(key, daily) {
   if (key === 'bodySelf') return !!daily.bodySelf
   if (key === 'feelings') return daily.emotions && daily.emotions.length > 0
   if (key === 'urges') return daily.urges && daily.urges.length > 0
-  if (key === 'chain') return !!daily.chainAnalysis
+  if (key === 'chain') return (daily.chains?.length || 0) > 0
   if (key === 'connection') return !!daily.connection
   if (key === 'meals') return daily.meals?.breakfast || daily.meals?.lunch || daily.meals?.dinner
   if (key === 'wins') return !!daily.win
   if (key === 'reading') return !!daily.reading?.minutes
   if (key === 'custom') return daily.customTrackers && Object.values(daily.customTrackers).some(v => v)
   if (key === 'weekly') return false // Always available
+  if (key === 'schedule' || key === 'goals') return false // Reference views, not check-ins
   return false
 }
 
@@ -145,6 +150,8 @@ export default function CheckinsTab({ daily, onUpdate, profile, onProfileUpdate,
     if (activeSub === 'wins') return wrap(<WinsSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={goBack} />)
     if (activeSub === 'reading') return wrap(<ReadingSection daily={daily} onUpdate={onUpdate} onToast={onToast} fromHome={fromHome} onGoHome={goBack} />)
     if (activeSub === 'custom') return wrap(<CustomTrackersSection daily={daily} onUpdate={onUpdate} onToast={onToast} profile={profile} fromHome={fromHome} onGoHome={goBack} />)
+    if (activeSub === 'schedule') return wrap(<DailySchedule profile={profile} onProfileUpdate={onProfileUpdate} fromHome={fromHome} onGoHome={goBack} />)
+    if (activeSub === 'goals') return wrap(<GoalTracker profile={profile} onProfileUpdate={onProfileUpdate} fromHome={fromHome} onGoHome={goBack} />)
   }
 
   // Default: tile grid view

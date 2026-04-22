@@ -52,13 +52,14 @@ const SCENES = {
     description: 'Moonlit room, warm and quiet',
   },
   nightRisk: {
-    // True protective mode — darker, still warm-edged, only when the
-    // clinical isNightRisk flag is on (9pm-4am risk window).
-    gradient: 'linear-gradient(180deg, #2A2340 0%, #3A3250 100%)',
+    // Protective late-night palette (9pm-4am). Softened from the original
+    // #1A1A2E slab so a ME/CFS wakeup doesn't open into a near-black
+    // room — still dimmer than evening, but warm and holding, not ominous.
+    gradient: 'linear-gradient(180deg, #3A3250 0%, #4A4268 100%)',
     elements: ['🌙', '⭐', '✨', '⭐'],
-    ground: '#3A3250',
+    ground: '#453D60',
     groundElements: ['🌿', '💙'],
-    description: 'Protected night space with calming energy',
+    description: 'Quiet late-night space — warm and held',
   },
 }
 

@@ -214,16 +214,18 @@ export default function HomeTab({ profile, daily, onNavigate, onUpdate, onToast,
   }, [daily?.energy, daily?.crash?.triggered, daily?.window])
 
   // Determine next action. When crashed, don't nag — surface a soft pick
-  // (water / meds / word of day) rather than "do your energy check-in"
-  // while she's in the energy crash she's trying to rest through.
+  // (water / meds) rather than "do your energy check-in" while she's in
+  // the energy crash she's trying to rest through.
   const nextAction = useMemo(() => {
     const items = flow.items
+    // Only consider navigable items — word-of-the-day and other inline
+    // cards have tab:null and can't be used as a tap target.
     const undone = items.filter(item => item.tab && !isDone(item.key, daily))
     if (!undone.length) return null
     if (isCrashed) {
       // Prefer low-effort quick-actions first; skip anything that requires
       // introspection (feelings, sensory, dissociation, bodySelf, circles).
-      const LOW_EFFORT = new Set(['water', 'meds', 'word'])
+      const LOW_EFFORT = new Set(['water', 'meds'])
       const HEAVY = new Set(['feelings', 'sensory', 'dissociation', 'bodySelf', 'circles', 'chain'])
       const easy = undone.find(i => LOW_EFFORT.has(i.key))
       if (easy) return easy

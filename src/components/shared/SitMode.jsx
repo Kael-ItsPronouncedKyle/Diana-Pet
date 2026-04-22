@@ -89,11 +89,12 @@ export default function SitMode({ creatureId, moodState, daily, onClose }) {
       <button
         onClick={another}
         style={{
-          padding: '10px 20px', borderRadius: 14,
-          background: 'rgba(255,255,255,0.2)', color: 'white',
-          border: '1.5px solid rgba(255,255,255,0.3)',
-          fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          minHeight: 40,
+          padding: '12px 24px', borderRadius: 14,
+          background: 'white', color: 'var(--text, #3D3535)',
+          border: 'none',
+          fontSize: 14, fontWeight: 800, cursor: 'pointer',
+          minHeight: 44,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
         }}
       >
         Another line

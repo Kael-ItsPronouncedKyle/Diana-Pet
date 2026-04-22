@@ -531,7 +531,7 @@ export function CrisisButton({ onClick }) {
         position: 'fixed',
         bottom: `calc(68px + env(safe-area-inset-bottom))`,
         right: 16,
-        zIndex: 900,
+        zIndex: 960,
         width: 48, height: 48, borderRadius: '50%',
         background: isNight ? '#3D2020' : 'var(--card, white)',
         border: `2px solid ${isNight ? '#E87B7B' : '#FDECEC'}`,
